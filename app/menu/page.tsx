@@ -284,10 +284,11 @@ function MenuContent() {
             zIndex: 1000,
             px: 4,
             py: 1.5,
-            fontSize: '1.1rem',
+            fontSize: { xs: '1rem', sm: '1.1rem' },
             fontWeight: 700,
             boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
             minWidth: 200,
+            whiteSpace: 'nowrap',
           }}
         >
           Place Order • {getCartItemCount()} {getCartItemCount() === 1 ? 'item' : 'items'}
