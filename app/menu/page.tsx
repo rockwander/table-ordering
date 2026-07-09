@@ -10,19 +10,12 @@ import {
   CardContent,
   CardMedia,
   Button,
-  IconButton,
   Chip,
   CircularProgress,
   Tabs,
   Tab,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import RemoveIcon from '@mui/icons-material/Remove';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import Header from '@/components/Header';
@@ -39,9 +32,6 @@ function MenuContent() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [loading, setLoading] = useState(true);
-  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
-  const [quantity, setQuantity] = useState(1);
-  const [specialInstructions, setSpecialInstructions] = useState('');
 
   const { addToCart, getCartItemCount } = useCart();
 
@@ -86,25 +76,6 @@ function MenuContent() {
     selectedCategory === 'all'
       ? menuItems
       : menuItems.filter((item) => item.category_id === selectedCategory);
-
-  const handleOpenDialog = (item: MenuItem) => {
-    setSelectedItem(item);
-    setQuantity(1);
-    setSpecialInstructions('');
-  };
-
-  const handleCloseDialog = () => {
-    setSelectedItem(null);
-    setQuantity(1);
-    setSpecialInstructions('');
-  };
-
-  const handleAddToCart = () => {
-    if (selectedItem) {
-      addToCart(selectedItem, quantity, specialInstructions || undefined);
-      handleCloseDialog();
-    }
-  };
 
   if (!tableNumber) {
     return null;
@@ -172,15 +143,8 @@ function MenuContent() {
               sx={{
                 display: 'flex',
                 flexDirection: 'column',
-                cursor: 'pointer',
-                transition: 'transform 0.2s, box-shadow 0.2s',
                 height: '100%',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 6px 20px rgba(0,0,0,0.15)',
-                },
               }}
-              onClick={() => handleOpenDialog(item)}
             >
                 {item.image_url && (
                   <CardMedia
@@ -246,10 +210,7 @@ function MenuContent() {
                       variant="contained"
                       size="small"
                       startIcon={<AddIcon />}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenDialog(item);
-                      }}
+                      onClick={() => addToCart(item, 1)}
                       sx={{ flexShrink: 0 }}
                     >
                       Add
@@ -294,75 +255,6 @@ function MenuContent() {
           Place Order • {getCartItemCount()} {getCartItemCount() === 1 ? 'item' : 'items'}
         </Button>
       )}
-
-      {/* Add to Cart Dialog */}
-      <Dialog open={!!selectedItem} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        {selectedItem && (
-          <>
-            <DialogTitle>{selectedItem.name}</DialogTitle>
-            <DialogContent>
-              {selectedItem.image_url && (
-                <Box
-                  component="img"
-                  src={selectedItem.image_url}
-                  alt={selectedItem.name}
-                  sx={{
-                    width: '100%',
-                    height: 200,
-                    objectFit: 'cover',
-                    borderRadius: 2,
-                    mb: 2,
-                  }}
-                />
-              )}
-              {selectedItem.description && (
-                <Typography variant="body1" paragraph>
-                  {selectedItem.description}
-                </Typography>
-              )}
-              <Typography variant="h5" color="primary" fontWeight={700} sx={{ mb: 3 }}>
-                ₹{selectedItem.price.toFixed(2)}
-              </Typography>
-
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Quantity
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <IconButton
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    color="primary"
-                  >
-                    <RemoveIcon />
-                  </IconButton>
-                  <Typography variant="h6" sx={{ minWidth: 40, textAlign: 'center' }}>
-                    {quantity}
-                  </Typography>
-                  <IconButton onClick={() => setQuantity(quantity + 1)} color="primary">
-                    <AddIcon />
-                  </IconButton>
-                </Box>
-              </Box>
-
-              <TextField
-                fullWidth
-                label="Special Instructions (Optional)"
-                multiline
-                rows={3}
-                value={specialInstructions}
-                onChange={(e) => setSpecialInstructions(e.target.value)}
-                placeholder="e.g., Less spicy, No onions..."
-              />
-            </DialogContent>
-            <DialogActions sx={{ px: 3, pb: 3 }}>
-              <Button onClick={handleCloseDialog}>Cancel</Button>
-              <Button variant="contained" onClick={handleAddToCart} startIcon={<AddIcon />}>
-                Add to Cart - ₹{(selectedItem.price * quantity).toFixed(2)}
-              </Button>
-            </DialogActions>
-          </>
-        )}
-      </Dialog>
     </Box>
   );
 }
