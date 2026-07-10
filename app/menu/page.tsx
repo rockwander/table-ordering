@@ -14,8 +14,10 @@ import {
   CircularProgress,
   Tabs,
   Tab,
+  IconButton,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import RemoveIcon from '@mui/icons-material/Remove';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import Header from '@/components/Header';
@@ -33,7 +35,7 @@ function MenuContent() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [loading, setLoading] = useState(true);
 
-  const { addToCart, getCartItemCount } = useCart();
+  const { cartItems, addToCart, updateQuantity, removeFromCart, getCartItemCount } = useCart();
 
   useEffect(() => {
     if (!tableNumber) {
@@ -76,6 +78,19 @@ function MenuContent() {
     selectedCategory === 'all'
       ? menuItems
       : menuItems.filter((item) => item.category_id === selectedCategory);
+
+  const getItemQuantityInCart = (itemId: string) => {
+    const cartItem = cartItems.find((ci) => ci.menuItem.id === itemId);
+    return cartItem?.quantity || 0;
+  };
+
+  const handleQuantityChange = (item: MenuItem, newQuantity: number) => {
+    if (newQuantity === 0) {
+      removeFromCart(item.id);
+    } else {
+      updateQuantity(item.id, newQuantity);
+    }
+  };
 
   if (!tableNumber) {
     return null;
@@ -206,15 +221,58 @@ function MenuContent() {
                     <Typography variant="h6" color="primary" fontWeight={700} sx={{ whiteSpace: 'nowrap' }}>
                       ₹{item.price.toFixed(2)}
                     </Typography>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      startIcon={<AddIcon />}
-                      onClick={() => addToCart(item, 1)}
-                      sx={{ flexShrink: 0 }}
-                    >
-                      Add
-                    </Button>
+                    {getItemQuantityInCart(item.id) === 0 ? (
+                      <Button
+                        variant="contained"
+                        size="small"
+                        startIcon={<AddIcon />}
+                        onClick={() => addToCart(item, 1)}
+                        sx={{ flexShrink: 0 }}
+                      >
+                        Add
+                      </Button>
+                    ) : (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleQuantityChange(item, getItemQuantityInCart(item.id) - 1)}
+                          color="primary"
+                          sx={{
+                            bgcolor: 'primary.main',
+                            color: 'white',
+                            '&:hover': { bgcolor: 'primary.dark' },
+                            width: 28,
+                            height: 28,
+                          }}
+                        >
+                          <RemoveIcon fontSize="small" />
+                        </IconButton>
+                        <Typography
+                          variant="body1"
+                          sx={{
+                            minWidth: 32,
+                            textAlign: 'center',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {getItemQuantityInCart(item.id)}
+                        </Typography>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleQuantityChange(item, getItemQuantityInCart(item.id) + 1)}
+                          color="primary"
+                          sx={{
+                            bgcolor: 'primary.main',
+                            color: 'white',
+                            '&:hover': { bgcolor: 'primary.dark' },
+                            width: 28,
+                            height: 28,
+                          }}
+                        >
+                          <AddIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    )}
                   </Box>
                 </CardContent>
               </Card>

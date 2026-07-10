@@ -16,6 +16,7 @@ import {
   ListItem,
   TextField,
   Alert,
+  Chip,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
@@ -27,6 +28,24 @@ import { supabase } from '@/lib/supabase';
 import { useCart } from '@/contexts/CartContext';
 import { RestaurantSettings } from '@/types';
 
+interface Order {
+  id: string;
+  table_number: number;
+  status: string;
+  subtotal: number;
+  tax: number;
+  total: number;
+  notes: string | null;
+  created_at: string;
+  order_items: Array<{
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+    special_instructions: string | null;
+  }>;
+}
+
 function CartContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -36,6 +55,8 @@ function CartContent() {
   const [orderNotes, setOrderNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [outstandingOrders, setOutstandingOrders] = useState<Order[]>([]);
+  const [fetchingOrders, setFetchingOrders] = useState(true);
 
   const { cartItems, updateQuantity, removeFromCart, getCartTotal, clearCart } = useCart();
 
@@ -45,6 +66,7 @@ function CartContent() {
       return;
     }
     fetchSettings();
+    fetchOutstandingOrders();
   }, [tableNumber, router]);
 
   const fetchSettings = async () => {
@@ -61,14 +83,39 @@ function CartContent() {
     }
   };
 
+  const fetchOutstandingOrders = async () => {
+    try {
+      setFetchingOrders(true);
+      const { data: orders, error: ordersError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (*)
+        `)
+        .eq('table_number', parseInt(tableNumber!))
+        .neq('status', 'paid')
+        .order('created_at', { ascending: true });
+
+      if (ordersError) throw ordersError;
+      setOutstandingOrders(orders || []);
+    } catch (error) {
+      console.error('Error fetching outstanding orders:', error);
+    } finally {
+      setFetchingOrders(false);
+    }
+  };
+
   const calculateTax = (subtotal: number) => {
     if (!settings) return 0;
     return (subtotal * settings.tax_rate) / 100;
   };
 
-  const subtotal = getCartTotal();
-  const tax = calculateTax(subtotal);
-  const total = subtotal + tax;
+  const newCartSubtotal = getCartTotal();
+  const newCartTax = calculateTax(newCartSubtotal);
+  const newCartTotal = newCartSubtotal + newCartTax;
+
+  const outstandingTotal = outstandingOrders.reduce((sum, order) => sum + order.total, 0);
+  const grandTotal = outstandingTotal + newCartTotal;
 
   const handlePlaceOrder = async () => {
     if (cartItems.length === 0) {
@@ -86,9 +133,9 @@ function CartContent() {
         .insert({
           table_number: parseInt(tableNumber!),
           status: 'pending',
-          subtotal,
-          tax,
-          total,
+          subtotal: newCartSubtotal,
+          tax: newCartTax,
+          total: newCartTotal,
           notes: orderNotes || null,
         })
         .select()
@@ -112,9 +159,10 @@ function CartContent() {
 
       if (itemsError) throw itemsError;
 
-      // Clear cart and redirect
+      // Clear cart, refresh outstanding orders, and stay on cart page
       clearCart();
-      router.push(`/order/${order.id}?table=${tableNumber}`);
+      setOrderNotes('');
+      await fetchOutstandingOrders();
     } catch (error) {
       console.error('Error placing order:', error);
       setError('Failed to place order. Please try again.');
@@ -136,14 +184,25 @@ function CartContent() {
           <IconButton onClick={() => router.push(`/menu?table=${tableNumber}`)}>
             <ArrowBackIcon />
           </IconButton>
-          <Box>
+          <Box sx={{ flexGrow: 1 }}>
             <Typography variant="h4" fontWeight={700}>
-              Your Cart
+              Table {tableNumber}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Review your order before placing
+              {outstandingOrders.length > 0 ? 'Outstanding orders & new items' : 'Review your order before placing'}
             </Typography>
           </Box>
+          {(outstandingOrders.length > 0 || cartItems.length > 0) && (
+            <Button
+              variant="contained"
+              color="success"
+              size="large"
+              onClick={() => router.push(`/settle?table=${tableNumber}`)}
+              sx={{ fontWeight: 700 }}
+            >
+              Settle Bill
+            </Button>
+          )}
         </Box>
 
         {error && (
@@ -152,7 +211,69 @@ function CartContent() {
           </Alert>
         )}
 
-        {cartItems.length === 0 ? (
+        {/* Outstanding Orders */}
+        {outstandingOrders.length > 0 && (
+          <>
+            <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>
+              Outstanding Orders
+            </Typography>
+            {outstandingOrders.map((order, orderIndex) => (
+              <Card key={order.id} sx={{ mb: 3 }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Box>
+                      <Typography variant="h6" fontWeight={600}>
+                        Order #{orderIndex + 1}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {new Date(order.created_at).toLocaleString()}
+                      </Typography>
+                    </Box>
+                    <Chip
+                      label={order.status.toUpperCase()}
+                      color={order.status === 'completed' ? 'success' : 'warning'}
+                      size="small"
+                    />
+                  </Box>
+                  <Divider sx={{ my: 2 }} />
+                  <List dense>
+                    {order.order_items.map((item) => (
+                      <ListItem key={item.id} sx={{ px: 0 }}>
+                        <Box sx={{ width: '100%', display: 'flex', justifyContent: 'space-between' }}>
+                          <Box>
+                            <Typography variant="body1" fontWeight={500}>
+                              {item.name} × {item.quantity}
+                            </Typography>
+                            {item.special_instructions && (
+                              <Typography variant="body2" color="text.secondary" fontSize="0.875rem">
+                                Note: {item.special_instructions}
+                              </Typography>
+                            )}
+                          </Box>
+                          <Typography variant="body1" fontWeight={600}>
+                            ₹{(item.price * item.quantity).toFixed(2)}
+                          </Typography>
+                        </Box>
+                      </ListItem>
+                    ))}
+                  </List>
+                  <Divider sx={{ my: 2 }} />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="h6" fontWeight={700}>
+                      Order Total
+                    </Typography>
+                    <Typography variant="h6" fontWeight={700} color="primary">
+                      ₹{order.total.toFixed(2)}
+                    </Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+            ))}
+          </>
+        )}
+
+        {/* New Cart Items */}
+        {cartItems.length === 0 && outstandingOrders.length === 0 ? (
           <Card sx={{ textAlign: 'center', py: 8 }}>
             <ShoppingBagIcon sx={{ fontSize: 80, color: 'text.secondary', mb: 2 }} />
             <Typography variant="h6" gutterBottom>
@@ -168,8 +289,11 @@ function CartContent() {
               Browse Menu
             </Button>
           </Card>
-        ) : (
+        ) : cartItems.length > 0 ? (
           <>
+            <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>
+              New Order
+            </Typography>
             <Card sx={{ mb: 3 }}>
               <List>
                 {cartItems.map((item, index) => (
@@ -273,6 +397,25 @@ function CartContent() {
                   Order Summary
                 </Typography>
                 <Box sx={{ my: 2 }}>
+                  {outstandingOrders.length > 0 && (
+                    <>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          mb: 1,
+                        }}
+                      >
+                        <Typography variant="body1" color="text.secondary">
+                          Outstanding Orders ({outstandingOrders.length})
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary">
+                          ₹{outstandingTotal.toFixed(2)}
+                        </Typography>
+                      </Box>
+                      <Divider sx={{ my: 1 }} />
+                    </>
+                  )}
                   <Box
                     sx={{
                       display: 'flex',
@@ -280,8 +423,8 @@ function CartContent() {
                       mb: 1,
                     }}
                   >
-                    <Typography variant="body1">Subtotal</Typography>
-                    <Typography variant="body1">₹{subtotal.toFixed(2)}</Typography>
+                    <Typography variant="body1">New Order Subtotal</Typography>
+                    <Typography variant="body1">₹{newCartSubtotal.toFixed(2)}</Typography>
                   </Box>
                   <Box
                     sx={{
@@ -293,22 +436,57 @@ function CartContent() {
                     <Typography variant="body1">
                       Tax ({settings?.tax_rate || 0}%)
                     </Typography>
-                    <Typography variant="body1">₹{tax.toFixed(2)}</Typography>
+                    <Typography variant="body1">₹{newCartTax.toFixed(2)}</Typography>
                   </Box>
-                  <Divider sx={{ my: 2 }} />
                   <Box
                     sx={{
                       display: 'flex',
                       justifyContent: 'space-between',
+                      mb: 1,
                     }}
                   >
-                    <Typography variant="h6" fontWeight={700}>
-                      Total
-                    </Typography>
-                    <Typography variant="h6" fontWeight={700} color="primary">
-                      ₹{total.toFixed(2)}
-                    </Typography>
+                    <Typography variant="body1">New Order Total</Typography>
+                    <Typography variant="body1">₹{newCartTotal.toFixed(2)}</Typography>
                   </Box>
+                  {outstandingOrders.length > 0 && (
+                    <>
+                      <Divider sx={{ my: 2 }} />
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          bgcolor: 'primary.light',
+                          p: 1.5,
+                          borderRadius: 1,
+                        }}
+                      >
+                        <Typography variant="h6" fontWeight={700}>
+                          Grand Total
+                        </Typography>
+                        <Typography variant="h6" fontWeight={700}>
+                          ₹{grandTotal.toFixed(2)}
+                        </Typography>
+                      </Box>
+                    </>
+                  )}
+                  {outstandingOrders.length === 0 && (
+                    <>
+                      <Divider sx={{ my: 2 }} />
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                        }}
+                      >
+                        <Typography variant="h6" fontWeight={700}>
+                          Total
+                        </Typography>
+                        <Typography variant="h6" fontWeight={700} color="primary">
+                          ₹{newCartTotal.toFixed(2)}
+                        </Typography>
+                      </Box>
+                    </>
+                  )}
                 </Box>
 
                 <Button
@@ -328,6 +506,37 @@ function CartContent() {
               </CardContent>
             </Card>
           </>
+        ) : null}
+
+        {/* Show outstanding orders summary when no cart items */}
+        {cartItems.length === 0 && outstandingOrders.length > 0 && (
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom fontWeight={700}>
+                Total Outstanding
+              </Typography>
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  bgcolor: 'primary.light',
+                  p: 2,
+                  borderRadius: 1,
+                  mt: 2,
+                }}
+              >
+                <Typography variant="h5" fontWeight={700}>
+                  Grand Total
+                </Typography>
+                <Typography variant="h5" fontWeight={700}>
+                  ₹{outstandingTotal.toFixed(2)}
+                </Typography>
+              </Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
+                Add more items from the menu or settle your bill
+              </Typography>
+            </CardContent>
+          </Card>
         )}
       </Container>
     </Box>
