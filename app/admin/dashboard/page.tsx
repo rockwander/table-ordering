@@ -101,18 +101,19 @@ function DashboardContent() {
 
       if (ordersError) throw ordersError;
 
-      setOrders(ordersData || []);
+      const orders: Order[] = ordersData || [];
+      setOrders(orders);
 
       // Calculate stats
-      const todayOrders = ordersData?.length || 0;
+      const todayOrders = orders.length || 0;
       const todayRevenue =
-        ordersData
-          ?.filter((o) => o.status === 'paid')
+        orders
+          .filter((o) => o.status === 'paid')
           .reduce((sum, o) => sum + o.total, 0) || 0;
       const pendingOrders =
-        ordersData?.filter((o) => o.status === 'pending').length || 0;
+        orders.filter((o) => o.status === 'pending').length || 0;
       const activeOrders =
-        ordersData?.filter((o) =>
+        orders.filter((o) =>
           ['pending', 'confirmed', 'preparing', 'ready'].includes(o.status)
         ).length || 0;
 

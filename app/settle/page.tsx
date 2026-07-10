@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
   Container,
@@ -316,5 +316,9 @@ function SettleContent() {
 }
 
 export default function SettlePage() {
-  return <SettleContent />;
+  return (
+    <Suspense fallback={<CircularProgress />}>
+      <SettleContent />
+    </Suspense>
+  );
 }

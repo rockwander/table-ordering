@@ -33,11 +33,11 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminLayout from '@/components/AdminLayout';
 import { supabase } from '@/lib/supabase';
-import { Category, MenuItem } from '@/types';
+import { Category, MenuItem as MenuItemType } from '@/types';
 
 function MenuContent() {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItemType[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState(0);
 
@@ -53,7 +53,7 @@ function MenuContent() {
 
   // Menu Item Dialog State
   const [itemDialog, setItemDialog] = useState(false);
-  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+  const [editingItem, setEditingItem] = useState<MenuItemType | null>(null);
   const [itemForm, setItemForm] = useState({
     name: '',
     description: '',
@@ -152,7 +152,7 @@ function MenuContent() {
   };
 
   // Menu Item Handlers
-  const handleOpenItemDialog = (item?: MenuItem) => {
+  const handleOpenItemDialog = (item?: MenuItemType) => {
     if (item) {
       setEditingItem(item);
       setItemForm({

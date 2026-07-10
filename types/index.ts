@@ -1,14 +1,73 @@
-import { Database } from './database';
+// Type exports for Turbopack compatibility
 
-// Database types
-export type Table = Database['public']['Tables']['tables']['Row'];
-export type Category = Database['public']['Tables']['categories']['Row'];
-export type MenuItem = Database['public']['Tables']['menu_items']['Row'];
-export type Order = Database['public']['Tables']['orders']['Row'];
-export type OrderItem = Database['public']['Tables']['order_items']['Row'];
-export type RestaurantSettings = Database['public']['Tables']['restaurant_settings']['Row'];
+export type Table = {
+  id: string;
+  table_number: number;
+  qr_code: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
 
-// Application types
+export type Category = {
+  id: string;
+  name: string;
+  description: string | null;
+  display_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MenuItem = {
+  id: string;
+  category_id: string | null;
+  name: string;
+  description: string | null;
+  price: number;
+  image_url: string | null;
+  is_available: boolean;
+  is_vegetarian: boolean;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Order = {
+  id: string;
+  table_id: string | null;
+  table_number: number;
+  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'served' | 'bill_requested' | 'paid' | 'cancelled';
+  subtotal: number;
+  tax: number;
+  total: number;
+  notes: string | null;
+  viewed_by_admin: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type OrderItem = {
+  id: string;
+  order_id: string | null;
+  menu_item_id: string | null;
+  name: string;
+  price: number;
+  quantity: number;
+  special_instructions: string | null;
+  created_at: string;
+};
+
+export type RestaurantSettings = {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  tax_rate: number;
+  currency: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export interface CartItem {
   menuItem: MenuItem;
   quantity: number;
@@ -24,3 +83,6 @@ export interface OrderWithItems extends Order {
 }
 
 export type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'served' | 'bill_requested' | 'paid' | 'cancelled';
+
+// Add a default export to help module resolution
+export default {};

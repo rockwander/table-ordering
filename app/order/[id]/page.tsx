@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import {
   Container,
@@ -51,7 +51,7 @@ const statusColors: Record<OrderStatus, 'default' | 'primary' | 'secondary' | 'e
   cancelled: 'error',
 };
 
-export default function OrderPage() {
+function OrderPageContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -341,5 +341,13 @@ export default function OrderPage() {
         </Box>
       </Container>
     </Box>
+  );
+}
+
+export default function OrderPage() {
+  return (
+    <Suspense fallback={<CircularProgress />}>
+      <OrderPageContent />
+    </Suspense>
   );
 }

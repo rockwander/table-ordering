@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
   Container,
@@ -318,5 +318,9 @@ function MenuContent() {
 }
 
 export default function MenuPage() {
-  return <MenuContent />;
+  return (
+    <Suspense fallback={<CircularProgress />}>
+      <MenuContent />
+    </Suspense>
+  );
 }
