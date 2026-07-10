@@ -115,6 +115,7 @@ export interface Database {
           tax: number
           total: number
           notes: string | null
+          viewed_by_admin: boolean
           created_at: string
           updated_at: string
         }
@@ -127,6 +128,7 @@ export interface Database {
           tax?: number
           total?: number
           notes?: string | null
+          viewed_by_admin?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -139,6 +141,7 @@ export interface Database {
           tax?: number
           total?: number
           notes?: string | null
+          viewed_by_admin?: boolean
           created_at?: string
           updated_at?: string
         }
