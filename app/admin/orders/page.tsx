@@ -68,17 +68,33 @@ const filterOptions: ('all' | OrderStatus)[] = [
   'paid',
 ];
 
+interface TableOrders {
+  table_number: number;
+  orders: Order[];
+  total: number;
+  hasUnviewed: boolean;
+}
+
 function OrdersContent() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedTable, setSelectedTable] = useState<TableOrders | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [newStatus, setNewStatus] = useState<OrderStatus>('pending');
   const [updating, setUpdating] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<'all' | OrderStatus>('all');
+  const [settlingBill, setSettlingBill] = useState(false);
+  const [viewMode, setViewMode] = useState<'unsettled' | 'settled'>('unsettled');
   const [error, setError] = useState('');
+  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
 
   useEffect(() => {
+    // Initialize audio context
+    if (typeof window !== 'undefined') {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      setAudioContext(ctx);
+    }
+
     fetchOrders();
 
     // Subscribe to real-time order updates
@@ -87,7 +103,19 @@ function OrdersContent() {
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
+          schema: 'public',
+          table: 'orders',
+        },
+        () => {
+          playBuzzer();
+          fetchOrders();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
           schema: 'public',
           table: 'orders',
         },
@@ -101,6 +129,29 @@ function OrdersContent() {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  const playBuzzer = () => {
+    if (!audioContext) return;
+
+    try {
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.frequency.value = 800;
+      oscillator.type = 'sine';
+
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5);
+    } catch (error) {
+      console.error('Error playing buzzer:', error);
+    }
+  };
 
   const fetchOrders = async () => {
     try {
@@ -117,6 +168,48 @@ function OrdersContent() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const groupOrdersByTable = (orders: Order[]): TableOrders[] => {
+    const filteredOrders = orders.filter(order =>
+      viewMode === 'unsettled' ? order.status !== 'paid' : order.status === 'paid'
+    );
+
+    const grouped = filteredOrders.reduce((acc, order) => {
+      const tableNum = order.table_number;
+      if (!acc[tableNum]) {
+        acc[tableNum] = [];
+      }
+      acc[tableNum].push(order);
+      return acc;
+    }, {} as Record<number, Order[]>);
+
+    return Object.entries(grouped).map(([tableNum, orders]) => ({
+      table_number: parseInt(tableNum),
+      orders: orders.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
+      total: orders.reduce((sum, order) => sum + order.total, 0),
+      hasUnviewed: orders.some(order => !(order as any).viewed_by_admin),
+    })).sort((a, b) => a.table_number - b.table_number);
+  };
+
+  const handleOpenTable = (tableOrders: TableOrders) => {
+    setSelectedTable(tableOrders);
+
+    // Mark all orders as viewed
+    tableOrders.orders.forEach(async (order) => {
+      if (!(order as any).viewed_by_admin) {
+        await supabase
+          .from('orders')
+          .update({ viewed_by_admin: true })
+          .eq('id', order.id);
+      }
+    });
+  };
+
+  const handleCloseTable = () => {
+    setSelectedTable(null);
+    setSelectedOrder(null);
+    setOrderItems([]);
   };
 
   const handleOpenOrder = async (order: Order) => {
@@ -165,10 +258,32 @@ function OrdersContent() {
     }
   };
 
-  const filteredOrders =
-    filterStatus === 'all'
-      ? orders
-      : orders.filter((order) => order.status === filterStatus);
+  const handleSettleBill = async () => {
+    if (!selectedTable) return;
+
+    setSettlingBill(true);
+    setError('');
+
+    try {
+      const orderIds = selectedTable.orders.map(order => order.id);
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: 'paid', updated_at: new Date().toISOString() })
+        .in('id', orderIds);
+
+      if (error) throw error;
+
+      await fetchOrders();
+      handleCloseTable();
+    } catch (error) {
+      console.error('Error settling bill:', error);
+      setError('Failed to settle bill');
+    } finally {
+      setSettlingBill(false);
+    }
+  };
+
+  const tableGroups = groupOrdersByTable(orders);
 
   if (loading) {
     return (
@@ -193,7 +308,7 @@ function OrdersContent() {
             Orders Management
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            View and manage all customer orders
+            View orders grouped by table
           </Typography>
         </Box>
         <Button
@@ -214,73 +329,114 @@ function OrdersContent() {
       <Card>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs
-            value={filterStatus}
-            onChange={(_, value) => setFilterStatus(value)}
-            variant="scrollable"
-            scrollButtons="auto"
+            value={viewMode}
+            onChange={(_, value) => setViewMode(value)}
           >
-            <Tab label="All Orders" value="all" />
-            {filterOptions.slice(1).map((status) => (
-              <Tab
-                key={status}
-                label={statusLabels[status as OrderStatus]}
-                value={status}
-              />
-            ))}
+            <Tab label="Unsettled Orders" value="unsettled" />
+            <Tab label="Settled Orders" value="settled" />
           </Tabs>
         </Box>
 
         <CardContent>
-          {filteredOrders.length === 0 ? (
+          {tableGroups.length === 0 ? (
             <Box sx={{ textAlign: 'center', py: 4 }}>
-              <Typography color="text.secondary">No orders found</Typography>
+              <Typography color="text.secondary">
+                {viewMode === 'unsettled' ? 'No unsettled orders' : 'No settled orders'}
+              </Typography>
             </Box>
           ) : (
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Order ID</TableCell>
-                    <TableCell>Table</TableCell>
-                    <TableCell>Total</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Date/Time</TableCell>
-                    <TableCell align="right">Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredOrders.map((order) => (
-                    <TableRow key={order.id} hover>
-                      <TableCell>
-                        <Typography variant="body2" fontFamily="monospace">
-                          #{order.id.slice(0, 8)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }, gap: 2 }}>
+              {tableGroups.map((tableGroup) => (
+                <Card
+                  key={tableGroup.table_number}
+                  variant="outlined"
+                  sx={{
+                    cursor: 'pointer',
+                    position: 'relative',
+                    '&:hover': { boxShadow: 2 },
+                    border: tableGroup.hasUnviewed ? '2px solid' : '1px solid',
+                    borderColor: tableGroup.hasUnviewed ? 'warning.main' : 'divider',
+                  }}
+                  onClick={() => handleOpenTable(tableGroup)}
+                >
+                  <CardContent>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                      <Typography variant="h5" fontWeight={700}>
+                        Table {tableGroup.table_number}
+                      </Typography>
+                      {tableGroup.hasUnviewed && (
                         <Chip
-                          label={`Table ${order.table_number}`}
+                          label="NEW"
+                          color="warning"
                           size="small"
-                          variant="outlined"
+                          sx={{ animation: 'pulse 2s infinite', '@keyframes pulse': { '0%, 100%': { opacity: 1 }, '50%': { opacity: 0.5 } } }}
                         />
-                      </TableCell>
-                      <TableCell>
-                        <Typography fontWeight={600}>
-                          ₹{order.total.toFixed(2)}
+                      )}
+                    </Box>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      {tableGroup.orders.length} order{tableGroup.orders.length !== 1 ? 's' : ''}
+                    </Typography>
+                    <Typography variant="h6" color="primary" fontWeight={700}>
+                      ₹{tableGroup.total.toFixed(2)}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              ))}
+            </Box>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Table Orders Dialog */}
+      <Dialog
+        open={!!selectedTable}
+        onClose={handleCloseTable}
+        maxWidth="lg"
+        fullWidth
+      >
+        {selectedTable && (
+          <>
+            <DialogTitle>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box>
+                  <Typography variant="h5" fontWeight={700}>
+                    Table {selectedTable.table_number}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {selectedTable.orders.length} order{selectedTable.orders.length !== 1 ? 's' : ''}
+                  </Typography>
+                </Box>
+                {viewMode === 'unsettled' && (
+                  <Button
+                    variant="contained"
+                    color="success"
+                    onClick={handleSettleBill}
+                    disabled={settlingBill}
+                  >
+                    {settlingBill ? <CircularProgress size={20} /> : `Settle Bill - ₹${selectedTable.total.toFixed(2)}`}
+                  </Button>
+                )}
+              </Box>
+            </DialogTitle>
+            <DialogContent dividers>
+              {selectedTable.orders.map((order, index) => (
+                <Card key={order.id} variant="outlined" sx={{ mb: 2 }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                      <Box>
+                        <Typography variant="h6" fontWeight={600}>
+                          Order #{index + 1}
                         </Typography>
-                      </TableCell>
-                      <TableCell>
+                        <Typography variant="body2" color="text.secondary">
+                          {new Date(order.created_at).toLocaleString()}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                         <Chip
                           label={statusLabels[order.status]}
                           color={statusColors[order.status]}
                           size="small"
                         />
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {new Date(order.created_at).toLocaleString()}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
                         <Button
                           size="small"
                           variant="outlined"
@@ -288,15 +444,38 @@ function OrdersContent() {
                         >
                           View Details
                         </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </CardContent>
-      </Card>
+                      </Box>
+                    </Box>
+                    <Typography variant="h6" color="primary" fontWeight={700}>
+                      ₹{order.total.toFixed(2)}
+                    </Typography>
+                    {order.notes && (
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        Note: {order.notes}
+                      </Typography>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+              <Card variant="outlined" sx={{ bgcolor: 'primary.light', mt: 3 }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h6" fontWeight={700}>
+                      Total Amount
+                    </Typography>
+                    <Typography variant="h5" fontWeight={700}>
+                      ₹{selectedTable.total.toFixed(2)}
+                    </Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+            </DialogContent>
+            <DialogActions sx={{ px: 3, py: 2 }}>
+              <Button onClick={handleCloseTable}>Close</Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
 
       {/* Order Details Dialog */}
       <Dialog
