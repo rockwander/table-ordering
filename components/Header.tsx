@@ -45,17 +45,17 @@ export default function Header({
                   px: 2,
                   py: 0.75,
                   borderRadius: 2,
-                  bgcolor: outstandingOrdersCount > 0 ? 'warning.main' : 'primary.main',
+                  bgcolor: outstandingOrdersCount > 0 ? 'success.main' : 'primary.main',
                   color: 'white',
                   cursor: outstandingOrdersCount > 0 ? 'pointer' : 'default',
                   '&:hover': outstandingOrdersCount > 0 ? {
-                    bgcolor: 'warning.dark',
+                    bgcolor: 'success.dark',
                   } : {},
                 }}
               >
                 {outstandingOrdersCount > 0 ? (
                   <Typography variant="body2" fontWeight={600}>
-                    Outstanding: ₹{outstandingTotal.toFixed(2)}
+                    Settle Bill
                   </Typography>
                 ) : (
                   <Typography variant="body2" fontWeight={600}>
