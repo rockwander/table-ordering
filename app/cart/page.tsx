@@ -175,9 +175,17 @@ function CartContent() {
     return null;
   }
 
+  const outstandingOrdersCount = outstandingOrders.length;
+  const outstandingOrdersTotal = outstandingOrders.reduce((sum, order) => sum + order.total, 0);
+
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: 4 }}>
-      <Header tableNumber={parseInt(tableNumber)} showCart={false} />
+      <Header
+        tableNumber={parseInt(tableNumber)}
+        showCart={false}
+        outstandingOrdersCount={outstandingOrdersCount}
+        outstandingTotal={outstandingOrdersTotal}
+      />
 
       <Container maxWidth="md" sx={{ py: 3 }}>
         <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -192,17 +200,6 @@ function CartContent() {
               {outstandingOrders.length > 0 ? 'Outstanding orders & new items' : 'Review your order before placing'}
             </Typography>
           </Box>
-          {(outstandingOrders.length > 0 || cartItems.length > 0) && (
-            <Button
-              variant="contained"
-              color="success"
-              size="large"
-              onClick={() => router.push(`/settle?table=${tableNumber}`)}
-              sx={{ fontWeight: 700 }}
-            >
-              Settle Bill
-            </Button>
-          )}
         </Box>
 
         {error && (
