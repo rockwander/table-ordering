@@ -91,29 +91,31 @@ function DashboardContent() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      // Fetch today's orders
-      const { data: ordersData, error: ordersError } = await supabase
+      // Fetch ALL today's orders for accurate stats calculation
+      const { data: allOrdersData, error: allOrdersError } = await supabase
         .from('orders')
         .select('*')
         .gte('created_at', today.toISOString())
-        .order('created_at', { ascending: false })
-        .limit(10);
+        .order('created_at', { ascending: false });
 
-      if (ordersError) throw ordersError;
+      if (allOrdersError) throw allOrdersError;
 
-      const orders: Order[] = ordersData || [];
-      setOrders(orders);
+      const allOrders: Order[] = allOrdersData || [];
 
-      // Calculate stats
-      const todayOrders = orders.length || 0;
+      // Fetch recent 10 orders for display
+      const recentOrders = allOrders.slice(0, 10);
+      setOrders(recentOrders);
+
+      // Calculate stats from ALL orders, not just the recent 10
+      const todayOrders = allOrders.length || 0;
       const todayRevenue =
-        orders
+        allOrders
           .filter((o) => o.status === 'paid')
           .reduce((sum, o) => sum + o.total, 0) || 0;
       const pendingOrders =
-        orders.filter((o) => o.status === 'pending').length || 0;
+        allOrders.filter((o) => o.status === 'pending').length || 0;
       const activeOrders =
-        orders.filter((o) =>
+        allOrders.filter((o) =>
           ['pending', 'confirmed', 'preparing', 'ready'].includes(o.status)
         ).length || 0;
 
