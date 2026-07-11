@@ -34,6 +34,8 @@ function MenuContent() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [loading, setLoading] = useState(true);
+  const [outstandingOrdersCount, setOutstandingOrdersCount] = useState(0);
+  const [outstandingTotal, setOutstandingTotal] = useState(0);
 
   const { cartItems, addToCart, updateQuantity, removeFromCart, getCartItemCount } = useCart();
 
@@ -43,6 +45,7 @@ function MenuContent() {
       return;
     }
     fetchMenuData();
+    fetchOutstandingOrders();
   }, [tableNumber, router]);
 
   const fetchMenuData = async () => {
@@ -71,6 +74,30 @@ function MenuContent() {
       console.error('Error fetching menu:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchOutstandingOrders = async () => {
+    try {
+      const { data: orders, error } = await supabase
+        .from('orders')
+        .select('id, total')
+        .eq('table_number', parseInt(tableNumber!))
+        .neq('status', 'paid')
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      if (orders && orders.length > 0) {
+        setOutstandingOrdersCount(orders.length);
+        const total = orders.reduce((sum, order) => sum + order.total, 0);
+        setOutstandingTotal(total);
+      } else {
+        setOutstandingOrdersCount(0);
+        setOutstandingTotal(0);
+      }
+    } catch (error) {
+      console.error('Error fetching outstanding orders:', error);
     }
   };
 
@@ -113,7 +140,12 @@ function MenuContent() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: 10 }}>
-      <Header tableNumber={parseInt(tableNumber)} showCart={false} />
+      <Header
+        tableNumber={parseInt(tableNumber)}
+        showCart={false}
+        outstandingOrdersCount={outstandingOrdersCount}
+        outstandingTotal={outstandingTotal}
+      />
 
       <Container maxWidth="lg" sx={{ py: 3 }}>
         <Box sx={{ mb: 3 }}>

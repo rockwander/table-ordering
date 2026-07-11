@@ -16,7 +16,6 @@ import {
   Chip,
   Alert,
 } from '@mui/material';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import Header from '@/components/Header';
 import { supabase } from '@/lib/supabase';
@@ -48,9 +47,7 @@ function SettleContent() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [settings, setSettings] = useState<RestaurantSettings | null>(null);
   const [loading, setLoading] = useState(true);
-  const [settling, setSettling] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     if (!tableNumber) {
@@ -94,39 +91,6 @@ function SettleContent() {
     }
   };
 
-  const handleSettleBill = async () => {
-    if (orders.length === 0) {
-      setError('No outstanding orders to settle');
-      return;
-    }
-
-    setSettling(true);
-    setError('');
-
-    try {
-      // Update all orders to 'paid' status
-      const orderIds = orders.map((order) => order.id);
-      const { error: updateError } = await supabase
-        .from('orders')
-        .update({ status: 'paid' })
-        .in('id', orderIds);
-
-      if (updateError) throw updateError;
-
-      setSuccess(true);
-
-      // Redirect after a short delay
-      setTimeout(() => {
-        router.push(`/menu?table=${tableNumber}`);
-      }, 2000);
-    } catch (error) {
-      console.error('Error settling bill:', error);
-      setError('Failed to settle bill. Please try again.');
-    } finally {
-      setSettling(false);
-    }
-  };
-
   const grandTotal = orders.reduce((sum, order) => sum + order.total, 0);
 
   if (!tableNumber) {
@@ -144,32 +108,6 @@ function SettleContent() {
         }}
       >
         <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (success) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '100vh',
-          bgcolor: 'background.default',
-        }}
-      >
-        <CheckCircleIcon sx={{ fontSize: 100, color: 'success.main', mb: 2 }} />
-        <Typography variant="h4" fontWeight={700} gutterBottom>
-          Bill Settled!
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Thank you for dining with us
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          Redirecting...
-        </Typography>
       </Box>
     );
   }
@@ -283,30 +221,25 @@ function SettleContent() {
               </CardContent>
             </Card>
 
-            {/* Settle Button */}
-            <Button
-              variant="contained"
-              color="success"
-              fullWidth
-              size="large"
-              onClick={handleSettleBill}
-              disabled={settling}
-              sx={{ py: 2, fontSize: '1.1rem', fontWeight: 700 }}
-            >
-              {settling ? (
-                <CircularProgress size={24} color="inherit" />
-              ) : (
-                `Settle Bill - ₹${grandTotal.toFixed(2)}`
-              )}
-            </Button>
+            {/* Payment Instructions */}
+            <Card sx={{ bgcolor: 'info.light', mb: 2 }}>
+              <CardContent>
+                <Typography variant="h6" fontWeight={600} gutterBottom textAlign="center">
+                  Payment Instructions
+                </Typography>
+                <Typography variant="body1" textAlign="center">
+                  Please pay the total bill amount of <strong>₹{grandTotal.toFixed(2)}</strong> at the counter
+                </Typography>
+              </CardContent>
+            </Card>
 
             <Button
-              variant="text"
+              variant="outlined"
               fullWidth
-              onClick={() => router.push(`/cart?table=${tableNumber}`)}
+              onClick={() => router.push(`/menu?table=${tableNumber}`)}
               sx={{ mt: 2 }}
             >
-              Back to Cart
+              Back to Menu
             </Button>
           </>
         )}

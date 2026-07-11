@@ -10,9 +10,18 @@ interface HeaderProps {
   showCart?: boolean;
   cartItemCount?: number;
   isAdmin?: boolean;
+  outstandingOrdersCount?: number;
+  outstandingTotal?: number;
 }
 
-export default function Header({ tableNumber, showCart = false, cartItemCount = 0, isAdmin = false }: HeaderProps) {
+export default function Header({
+  tableNumber,
+  showCart = false,
+  cartItemCount = 0,
+  isAdmin = false,
+  outstandingOrdersCount = 0,
+  outstandingTotal = 0
+}: HeaderProps) {
   const router = useRouter();
 
   return (
@@ -24,6 +33,11 @@ export default function Header({ tableNumber, showCart = false, cartItemCount = 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             {tableNumber && (
               <Box
+                onClick={() => {
+                  if (outstandingOrdersCount > 0) {
+                    router.push(`/settle?table=${tableNumber}`);
+                  }
+                }}
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
@@ -31,13 +45,23 @@ export default function Header({ tableNumber, showCart = false, cartItemCount = 
                   px: 2,
                   py: 0.75,
                   borderRadius: 2,
-                  bgcolor: 'primary.main',
+                  bgcolor: outstandingOrdersCount > 0 ? 'warning.main' : 'primary.main',
                   color: 'white',
+                  cursor: outstandingOrdersCount > 0 ? 'pointer' : 'default',
+                  '&:hover': outstandingOrdersCount > 0 ? {
+                    bgcolor: 'warning.dark',
+                  } : {},
                 }}
               >
-                <Typography variant="body2" fontWeight={600}>
-                  Table {tableNumber}
-                </Typography>
+                {outstandingOrdersCount > 0 ? (
+                  <Typography variant="body2" fontWeight={600}>
+                    Outstanding: ₹{outstandingTotal.toFixed(2)}
+                  </Typography>
+                ) : (
+                  <Typography variant="body2" fontWeight={600}>
+                    Table {tableNumber}
+                  </Typography>
+                )}
               </Box>
             )}
 
