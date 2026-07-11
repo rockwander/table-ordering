@@ -1,6 +1,6 @@
 'use client';
 
-import { AppBar, Toolbar, Container, Typography, Box, IconButton, Badge } from '@mui/material';
+import { AppBar, Toolbar, Container, Typography, Box, IconButton, Badge, Button } from '@mui/material';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import Logo from './Logo';
 import { useRouter } from 'next/navigation';
@@ -34,23 +34,23 @@ export default function Header({
             {tableNumber && (
               <>
                 {outstandingOrdersCount > 0 ? (
-                  <Box
+                  <Button
+                    variant="contained"
+                    color="success"
                     onClick={() => router.push(`/settle?table=${tableNumber}`)}
                     sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
                       px: 3,
                       py: 1.25,
                       borderRadius: 1,
-                      bgcolor: 'success.main',
-                      color: 'white',
-                      cursor: 'pointer',
                       minWidth: 120,
                       boxShadow: 2,
+                      fontWeight: 700,
+                      fontSize: '1rem',
+                      textTransform: 'none',
+                      userSelect: 'none',
+                      WebkitTapHighlightColor: 'transparent',
                       transition: 'all 0.2s',
                       '&:hover': {
-                        bgcolor: 'success.dark',
                         boxShadow: 3,
                         transform: 'translateY(-1px)',
                       },
@@ -59,10 +59,8 @@ export default function Header({
                       },
                     }}
                   >
-                    <Typography variant="body1" fontWeight={700} color="white">
-                      Settle Bill
-                    </Typography>
-                  </Box>
+                    Settle Bill
+                  </Button>
                 ) : (
                   <Box
                     sx={{
