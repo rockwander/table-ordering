@@ -32,37 +32,56 @@ export default function Header({
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             {tableNumber && (
-              <Box
-                onClick={() => {
-                  if (outstandingOrdersCount > 0) {
-                    router.push(`/settle?table=${tableNumber}`);
-                  }
-                }}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1,
-                  px: 2,
-                  py: 0.75,
-                  borderRadius: 2,
-                  bgcolor: outstandingOrdersCount > 0 ? 'success.main' : 'primary.main',
-                  color: 'white',
-                  cursor: outstandingOrdersCount > 0 ? 'pointer' : 'default',
-                  '&:hover': outstandingOrdersCount > 0 ? {
-                    bgcolor: 'success.dark',
-                  } : {},
-                }}
-              >
+              <>
                 {outstandingOrdersCount > 0 ? (
-                  <Typography variant="body2" fontWeight={600}>
-                    Settle Bill
-                  </Typography>
+                  <Box
+                    onClick={() => router.push(`/settle?table=${tableNumber}`)}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      px: 3,
+                      py: 1.25,
+                      borderRadius: 1,
+                      bgcolor: 'success.main',
+                      color: 'white',
+                      cursor: 'pointer',
+                      minWidth: 120,
+                      boxShadow: 2,
+                      transition: 'all 0.2s',
+                      '&:hover': {
+                        bgcolor: 'success.dark',
+                        boxShadow: 3,
+                        transform: 'translateY(-1px)',
+                      },
+                      '&:active': {
+                        transform: 'translateY(0)',
+                      },
+                    }}
+                  >
+                    <Typography variant="body1" fontWeight={700} color="white">
+                      Settle Bill
+                    </Typography>
+                  </Box>
                 ) : (
-                  <Typography variant="body2" fontWeight={600}>
-                    Table {tableNumber}
-                  </Typography>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      px: 2,
+                      py: 0.75,
+                      borderRadius: 2,
+                      bgcolor: 'primary.main',
+                      color: 'white',
+                    }}
+                  >
+                    <Typography variant="body2" fontWeight={600}>
+                      Table {tableNumber}
+                    </Typography>
+                  </Box>
                 )}
-              </Box>
+              </>
             )}
 
             {isAdmin && (
