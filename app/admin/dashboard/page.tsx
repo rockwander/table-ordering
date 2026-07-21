@@ -525,7 +525,7 @@ function DashboardContent() {
           ) : (
             <Box>
               {bills.map((bill) => (
-                <Accordion key={bill.bill_id} sx={{ mb: 2 }}>
+                <Accordion key={bill.bill_id} defaultExpanded={viewTab === 'unsettled'} sx={{ mb: 2 }}>
                   <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', pr: 2 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
