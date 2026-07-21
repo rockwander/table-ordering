@@ -84,5 +84,13 @@ export interface OrderWithItems extends Order {
 
 export type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'served' | 'bill_requested' | 'paid' | 'cancelled';
 
+export type BuzzerNotification = {
+  id: string;
+  table_number: number;
+  status: 'active' | 'dismissed';
+  created_at: string;
+  dismissed_at: string | null;
+};
+
 // Add a default export to help module resolution
 export default {};

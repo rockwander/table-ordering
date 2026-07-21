@@ -20,6 +20,7 @@ import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import Header from '@/components/Header';
 import { supabase } from '@/lib/supabase';
 import { Category, MenuItem } from '@/types';
@@ -36,6 +37,8 @@ function MenuContent() {
   const [loading, setLoading] = useState(true);
   const [outstandingOrdersCount, setOutstandingOrdersCount] = useState(0);
   const [outstandingTotal, setOutstandingTotal] = useState(0);
+  const [buzzerSending, setBuzzerSending] = useState(false);
+  const [buzzerSuccess, setBuzzerSuccess] = useState(false);
 
   const { cartItems, addToCart, updateQuantity, removeFromCart, getCartItemCount } = useCart();
 
@@ -116,6 +119,31 @@ function MenuContent() {
       removeFromCart(item.id);
     } else {
       updateQuantity(item.id, newQuantity);
+    }
+  };
+
+  const handleBuzzer = async () => {
+    if (buzzerSending || !tableNumber) return;
+
+    setBuzzerSending(true);
+    try {
+      const { error } = await supabase
+        .from('buzzer_notifications')
+        .insert({
+          table_number: parseInt(tableNumber),
+          status: 'active',
+        });
+
+      if (error) throw error;
+
+      setBuzzerSuccess(true);
+      setTimeout(() => {
+        setBuzzerSuccess(false);
+      }, 3000);
+    } catch (error) {
+      console.error('Error sending buzzer notification:', error);
+    } finally {
+      setBuzzerSending(false);
     }
   };
 
@@ -319,6 +347,31 @@ function MenuContent() {
           </Box>
         )}
       </Container>
+
+      {/* Floating Buzzer Button */}
+      <Button
+        variant="contained"
+        size="large"
+        color={buzzerSuccess ? 'success' : 'error'}
+        onClick={handleBuzzer}
+        disabled={buzzerSending}
+        startIcon={buzzerSuccess ? <CheckCircleIcon /> : <NotificationsActiveIcon />}
+        sx={{
+          position: 'fixed',
+          top: { xs: 80, sm: 24 },
+          right: 24,
+          zIndex: 1000,
+          px: 3,
+          py: 1.5,
+          fontSize: { xs: '0.95rem', sm: '1.1rem' },
+          fontWeight: 700,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+          minWidth: { xs: 'auto', sm: 180 },
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {buzzerSuccess ? 'Called!' : 'Call Waiter'}
+      </Button>
 
       {/* Floating Place Order Button */}
       {getCartItemCount() > 0 && (

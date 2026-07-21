@@ -25,8 +25,9 @@ import CurrencyRupeeIcon from '@mui/icons-material/CurrencyRupee';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminLayout from '@/components/AdminLayout';
+import BuzzerNotification from '@/components/BuzzerNotification';
 import { supabase } from '@/lib/supabase';
-import { Order, OrderStatus } from '@/types';
+import { Order, OrderStatus, BuzzerNotification as BuzzerNotificationType } from '@/types';
 import { useRouter } from 'next/navigation';
 
 const statusLabels: Record<OrderStatus, string> = {
@@ -55,6 +56,7 @@ function DashboardContent() {
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [buzzerNotifications, setBuzzerNotifications] = useState<BuzzerNotificationType[]>([]);
   const [stats, setStats] = useState({
     todayOrders: 0,
     todayRevenue: 0,
@@ -66,7 +68,7 @@ function DashboardContent() {
     fetchDashboardData();
 
     // Subscribe to real-time order updates
-    const channel = supabase
+    const ordersChannel = supabase
       .channel('dashboard-orders')
       .on(
         'postgres_changes',
@@ -81,8 +83,28 @@ function DashboardContent() {
       )
       .subscribe();
 
+    // Subscribe to real-time buzzer notifications
+    const buzzerChannel = supabase
+      .channel('dashboard-buzzer')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'buzzer_notifications',
+        },
+        (payload) => {
+          const newNotification = payload.new as BuzzerNotificationType;
+          if (newNotification.status === 'active') {
+            setBuzzerNotifications((prev) => [...prev, newNotification]);
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(ordersChannel);
+      supabase.removeChannel(buzzerChannel);
     };
   }, []);
 
@@ -136,6 +158,23 @@ function DashboardContent() {
     router.push(`/admin/orders?orderId=${orderId}`);
   };
 
+  const handleDismissBuzzer = async (notificationId: string) => {
+    try {
+      // Update the notification status in the database
+      await supabase
+        .from('buzzer_notifications')
+        .update({ status: 'dismissed', dismissed_at: new Date().toISOString() })
+        .eq('id', notificationId);
+
+      // Remove from local state
+      setBuzzerNotifications((prev) =>
+        prev.filter((notification) => notification.id !== notificationId)
+      );
+    } catch (error) {
+      console.error('Error dismissing buzzer notification:', error);
+    }
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
@@ -146,6 +185,15 @@ function DashboardContent() {
 
   return (
     <Box>
+      {/* Buzzer Notifications */}
+      {buzzerNotifications.map((notification) => (
+        <BuzzerNotification
+          key={notification.id}
+          tableNumber={notification.table_number}
+          onDismiss={() => handleDismissBuzzer(notification.id)}
+        />
+      ))}
+
       <Typography variant="h4" fontWeight={700} gutterBottom>
         Dashboard
       </Typography>
