@@ -11,7 +11,7 @@ BEGIN
     ) THEN
         ALTER TABLE buzzer_notifications
         ADD CONSTRAINT buzzer_notifications_notification_type_check
-        CHECK (notification_type IN ('service_call', 'new_order', 'settle_bill'));
+        CHECK (notification_type IN ('service_call', 'new_order'));
     END IF;
 END $$;
 

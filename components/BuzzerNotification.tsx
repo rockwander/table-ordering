@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { Box, Paper, Typography, keyframes } from '@mui/material';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
-import PaymentIcon from '@mui/icons-material/Payment';
 
 const ringAnimation = keyframes`
   0%, 10% {
@@ -33,7 +32,7 @@ const pulseAnimation = keyframes`
   }
 `;
 
-type NotificationType = 'service_call' | 'new_order' | 'settle_bill';
+type NotificationType = 'service_call' | 'new_order';
 
 interface NotificationConfig {
   soundUrl: string;
@@ -50,16 +49,10 @@ const notificationConfigs: Record<NotificationType, NotificationConfig> = {
     title: 'Service Request!',
   },
   new_order: {
-    soundUrl: 'https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3',
+    soundUrl: 'https://assets.mixkit.co/active_storage/sfx/2870/2870-preview.mp3',
     color: 'warning.main',
     icon: <RestaurantIcon sx={{ fontSize: 48 }} />,
     title: 'New Order!',
-  },
-  settle_bill: {
-    soundUrl: 'https://assets.mixkit.co/active_storage/sfx/2003/2003-preview.mp3',
-    color: 'success.main',
-    icon: <PaymentIcon sx={{ fontSize: 48 }} />,
-    title: 'Bill Settled!',
   },
 };
 
