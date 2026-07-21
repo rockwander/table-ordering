@@ -125,12 +125,25 @@ function DashboardContent() {
           schema: 'public',
           table: 'orders',
         },
-        () => {
+        (payload) => {
+          console.log('📦 Order change detected:', payload.eventType, payload.new);
           fetchDashboardData();
         }
       )
-      .subscribe((status) => {
+      .subscribe((status, err) => {
         console.log('📦 Orders channel status:', status);
+        if (err) {
+          console.error('❌ Orders channel error:', err);
+        }
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Successfully subscribed to orders updates');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Orders channel error - check if real-time is enabled');
+        } else if (status === 'TIMED_OUT') {
+          console.error('❌ Orders subscription timed out');
+        } else if (status === 'CLOSED') {
+          console.error('❌ Orders channel closed');
+        }
       });
 
     // Subscribe to real-time buzzer notifications
@@ -153,6 +166,19 @@ function DashboardContent() {
             // Add to queue instead of showing directly
             setNotificationQueue((prev) => [...prev, newNotification]);
           }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'order_items',
+        },
+        (payload) => {
+          console.log('📦 Order item added:', payload);
+          // Refresh dashboard when new order items are added
+          fetchDashboardData();
         }
       )
       .subscribe((status, err) => {
