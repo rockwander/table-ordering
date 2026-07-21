@@ -444,7 +444,7 @@ function DashboardContent() {
         <BuzzerNotification
           key={currentNotification.id}
           tableNumber={currentNotification.table_number}
-          notificationType={currentNotification.notification_type}
+          notificationType={currentNotification.notification_type || 'service_call'}
           onDismiss={() => handleDismissBuzzer(currentNotification.id)}
         />
       )}
