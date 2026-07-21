@@ -40,45 +40,62 @@ export default function BuzzerNotification({ tableNumber, onDismiss }: BuzzerNot
   const [ringCount, setRingCount] = useState(0);
 
   useEffect(() => {
+    console.log('🔔 BuzzerNotification mounted for Table', tableNumber);
+
     // Play ring animation 3 times (every 2 seconds for 6 seconds total)
     const ringIntervals = [0, 2000, 4000];
+    const timeouts: NodeJS.Timeout[] = [];
+
+    const playBeep = async () => {
+      try {
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+        // Resume audio context if it's suspended (required by browser autoplay policies)
+        if (audioContext.state === 'suspended') {
+          await audioContext.resume();
+        }
+
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.frequency.value = 800;
+        oscillator.type = 'sine';
+
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.5);
+
+        console.log('🔊 Beep played');
+      } catch (error) {
+        console.error('❌ Audio error:', error);
+      }
+    };
 
     ringIntervals.forEach((delay, index) => {
-      setTimeout(() => {
+      const timeout = setTimeout(() => {
+        console.log(`🔔 Ring ${index + 1} of 3`);
         setRingCount(prev => prev + 1);
-
-        // Play a beep sound (if browser supports it)
-        try {
-          const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-          const oscillator = audioContext.createOscillator();
-          const gainNode = audioContext.createGain();
-
-          oscillator.connect(gainNode);
-          gainNode.connect(audioContext.destination);
-
-          oscillator.frequency.value = 800;
-          oscillator.type = 'sine';
-
-          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-
-          oscillator.start(audioContext.currentTime);
-          oscillator.stop(audioContext.currentTime + 0.5);
-        } catch (error) {
-          console.log('Audio not supported');
-        }
+        playBeep();
       }, delay);
+      timeouts.push(timeout);
     });
 
     // Auto-dismiss after 6 seconds
     const dismissTimeout = setTimeout(() => {
+      console.log('✅ Auto-dismissing buzzer notification');
       onDismiss();
     }, 6000);
 
     return () => {
+      timeouts.forEach(t => clearTimeout(t));
       clearTimeout(dismissTimeout);
     };
-  }, [onDismiss]);
+  }, [onDismiss, tableNumber]);
 
   return (
     <Paper

@@ -65,6 +65,7 @@ function DashboardContent() {
   });
 
   useEffect(() => {
+    console.log('🚀 Dashboard mounted, setting up subscriptions...');
     fetchDashboardData();
 
     // Subscribe to real-time order updates
@@ -81,9 +82,12 @@ function DashboardContent() {
           fetchDashboardData();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📦 Orders channel status:', status);
+      });
 
     // Subscribe to real-time buzzer notifications
+    console.log('🔔 Setting up buzzer notifications channel...');
     const buzzerChannel = supabase
       .channel('dashboard-buzzer')
       .on(
@@ -94,15 +98,32 @@ function DashboardContent() {
           table: 'buzzer_notifications',
         },
         (payload) => {
+          console.log('🔔 Buzzer notification received:', payload);
           const newNotification = payload.new as BuzzerNotificationType;
           if (newNotification.status === 'active') {
+            console.log('✅ Adding buzzer notification for table:', newNotification.table_number);
             setBuzzerNotifications((prev) => [...prev, newNotification]);
           }
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        console.log('📡 Buzzer channel status:', status);
+        if (err) {
+          console.error('❌ Buzzer channel error:', err);
+        }
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Successfully subscribed to buzzer notifications');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Channel error - check if table exists and real-time is enabled');
+        } else if (status === 'TIMED_OUT') {
+          console.error('❌ Subscription timed out');
+        } else if (status === 'CLOSED') {
+          console.error('❌ Channel closed');
+        }
+      });
 
     return () => {
+      console.log('🧹 Cleaning up subscriptions...');
       supabase.removeChannel(ordersChannel);
       supabase.removeChannel(buzzerChannel);
     };
@@ -160,6 +181,7 @@ function DashboardContent() {
 
   const handleDismissBuzzer = async (notificationId: string) => {
     try {
+      console.log('🔕 Dismissing buzzer notification:', notificationId);
       // Update the notification status in the database
       await supabase
         .from('buzzer_notifications')
@@ -171,7 +193,7 @@ function DashboardContent() {
         prev.filter((notification) => notification.id !== notificationId)
       );
     } catch (error) {
-      console.error('Error dismissing buzzer notification:', error);
+      console.error('❌ Error dismissing buzzer notification:', error);
     }
   };
 

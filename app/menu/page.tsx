@@ -125,23 +125,30 @@ function MenuContent() {
   const handleBuzzer = async () => {
     if (buzzerSending || !tableNumber) return;
 
+    console.log('📞 Calling waiter for table:', tableNumber);
     setBuzzerSending(true);
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('buzzer_notifications')
         .insert({
           table_number: parseInt(tableNumber),
           status: 'active',
-        });
+        })
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error inserting buzzer notification:', error);
+        throw error;
+      }
 
+      console.log('✅ Buzzer notification sent:', data);
       setBuzzerSuccess(true);
       setTimeout(() => {
         setBuzzerSuccess(false);
       }, 3000);
     } catch (error) {
-      console.error('Error sending buzzer notification:', error);
+      console.error('❌ Error sending buzzer notification:', error);
+      alert('Failed to call waiter. Please check the console for errors.');
     } finally {
       setBuzzerSending(false);
     }
