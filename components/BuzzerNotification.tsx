@@ -49,7 +49,7 @@ const notificationConfigs: Record<NotificationType, NotificationConfig> = {
     title: 'Service Request!',
   },
   new_order: {
-    soundUrl: 'https://assets.mixkit.co/active_storage/sfx/2870/2870-preview.mp3',
+    soundUrl: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3',
     color: 'warning.main',
     icon: <RestaurantIcon sx={{ fontSize: 48 }} />,
     title: 'New Order!',
