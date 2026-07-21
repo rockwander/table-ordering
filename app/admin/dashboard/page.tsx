@@ -76,10 +76,12 @@ interface OrderWithItems extends Order {
   }>;
 }
 
-interface TableOrders {
+interface Bill {
+  bill_id: string;
   table_number: number;
   orders: OrderWithItems[];
   total: number;
+  settled_at?: string;
 }
 
 function DashboardContent() {
@@ -91,8 +93,8 @@ function DashboardContent() {
   const [notificationQueue, setNotificationQueue] = useState<BuzzerNotificationType[]>([]);
   const [viewTab, setViewTab] = useState<'unsettled' | 'settled'>('unsettled');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<{ type: 'order' | 'bill'; id?: string; tableOrders?: TableOrders } | null>(null);
-  const [settlingBill, setSettlingBill] = useState<number | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'order' | 'bill'; id?: string; bill?: Bill } | null>(null);
+  const [settlingBill, setSettlingBill] = useState<string | null>(null);
   const [stats, setStats] = useState({
     todayOrders: 0,
     todayRevenue: 0,
@@ -256,34 +258,65 @@ function DashboardContent() {
     }
   };
 
-  const groupOrdersByTable = (): TableOrders[] => {
+  const groupOrdersIntoBills = (): Bill[] => {
     const filteredOrders = orders.filter(order =>
       viewTab === 'unsettled' ? order.status !== 'paid' : order.status === 'paid'
     );
 
-    const grouped = filteredOrders.reduce((acc, order) => {
-      const tableNum = order.table_number;
-      if (!acc[tableNum]) {
-        acc[tableNum] = [];
-      }
-      acc[tableNum].push(order);
-      return acc;
-    }, {} as Record<number, OrderWithItems[]>);
+    if (viewTab === 'unsettled') {
+      // For unsettled: group by table (one active bill per table)
+      const grouped = filteredOrders.reduce((acc, order) => {
+        const tableNum = order.table_number;
+        if (!acc[tableNum]) {
+          acc[tableNum] = [];
+        }
+        acc[tableNum].push(order);
+        return acc;
+      }, {} as Record<number, OrderWithItems[]>);
 
-    return Object.entries(grouped).map(([tableNum, orders]) => ({
-      table_number: parseInt(tableNum),
-      orders: orders.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
-      total: orders.reduce((sum, order) => sum + order.total, 0),
-    })).sort((a, b) => a.table_number - b.table_number);
+      return Object.entries(grouped).map(([tableNum, orders]) => ({
+        bill_id: `table-${tableNum}-active`,
+        table_number: parseInt(tableNum),
+        orders: orders.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
+        total: orders.reduce((sum, order) => sum + order.total, 0),
+      })).sort((a, b) => a.table_number - b.table_number);
+    } else {
+      // For settled: group by table + settlement time (orders settled together = one bill)
+      const grouped = filteredOrders.reduce((acc, order) => {
+        const tableNum = order.table_number;
+        const settledTime = new Date(order.updated_at).toISOString().slice(0, 19); // Group by second
+        const billKey = `${tableNum}-${settledTime}`;
+
+        if (!acc[billKey]) {
+          acc[billKey] = {
+            table_number: tableNum,
+            orders: [],
+            settled_at: order.updated_at,
+          };
+        }
+        acc[billKey].orders.push(order);
+        return acc;
+      }, {} as Record<string, { table_number: number; orders: OrderWithItems[]; settled_at: string }>);
+
+      return Object.entries(grouped).map(([billKey, data]) => ({
+        bill_id: billKey,
+        table_number: data.table_number,
+        orders: data.orders.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
+        total: data.orders.reduce((sum, order) => sum + order.total, 0),
+        settled_at: data.settled_at,
+      })).sort((a, b) => new Date(b.settled_at!).getTime() - new Date(a.settled_at!).getTime()); // Most recent first
+    }
   };
 
-  const handleSettleBill = async (tableOrders: TableOrders) => {
-    setSettlingBill(tableOrders.table_number);
+  const handleSettleBill = async (bill: Bill) => {
+    setSettlingBill(bill.bill_id);
     try {
-      const orderIds = tableOrders.orders.map(order => order.id);
+      const orderIds = bill.orders.map(order => order.id);
+      const settlementTime = new Date().toISOString();
+
       const { error } = await supabase
         .from('orders')
-        .update({ status: 'paid', updated_at: new Date().toISOString() })
+        .update({ status: 'paid', updated_at: settlementTime })
         .in('id', orderIds);
 
       if (error) throw error;
@@ -324,9 +357,9 @@ function DashboardContent() {
     }
   };
 
-  const handleDeleteBill = async (tableOrders: TableOrders) => {
+  const handleDeleteBill = async (bill: Bill) => {
     try {
-      const orderIds = tableOrders.orders.map(order => order.id);
+      const orderIds = bill.orders.map(order => order.id);
 
       // Delete all order items
       const { error: itemsError } = await supabase
@@ -353,8 +386,8 @@ function DashboardContent() {
     }
   };
 
-  const openDeleteDialog = (type: 'order' | 'bill', id?: string, tableOrders?: TableOrders) => {
-    setDeleteTarget({ type, id, tableOrders });
+  const openDeleteDialog = (type: 'order' | 'bill', id?: string, bill?: Bill) => {
+    setDeleteTarget({ type, id, bill });
     setDeleteDialogOpen(true);
   };
 
@@ -363,8 +396,8 @@ function DashboardContent() {
 
     if (deleteTarget.type === 'order' && deleteTarget.id) {
       handleDeleteOrder(deleteTarget.id);
-    } else if (deleteTarget.type === 'bill' && deleteTarget.tableOrders) {
-      handleDeleteBill(deleteTarget.tableOrders);
+    } else if (deleteTarget.type === 'bill' && deleteTarget.bill) {
+      handleDeleteBill(deleteTarget.bill);
     }
   };
 
@@ -376,7 +409,7 @@ function DashboardContent() {
     );
   }
 
-  const tableGroups = groupOrdersByTable();
+  const bills = groupOrdersIntoBills();
 
   return (
     <Box>
@@ -483,7 +516,7 @@ function DashboardContent() {
             </Button>
           </Box>
 
-          {tableGroups.length === 0 ? (
+          {bills.length === 0 ? (
             <Box sx={{ textAlign: 'center', py: 4 }}>
               <Typography color="text.secondary">
                 No {viewTab} orders
@@ -491,24 +524,29 @@ function DashboardContent() {
             </Box>
           ) : (
             <Box>
-              {tableGroups.map((tableOrders) => (
-                <Accordion key={tableOrders.table_number} sx={{ mb: 2 }}>
+              {bills.map((bill) => (
+                <Accordion key={bill.bill_id} sx={{ mb: 2 }}>
                   <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', pr: 2 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Chip label={`Table ${tableOrders.table_number}`} color="primary" />
+                        <Chip label={`Table ${bill.table_number}`} color="primary" />
                         <Typography variant="body1" fontWeight={600}>
-                          {tableOrders.orders.length} order{tableOrders.orders.length !== 1 ? 's' : ''}
+                          {bill.orders.length} order{bill.orders.length !== 1 ? 's' : ''}
                         </Typography>
+                        {bill.settled_at && (
+                          <Typography variant="body2" color="text.secondary">
+                            {new Date(bill.settled_at).toLocaleString()}
+                          </Typography>
+                        )}
                       </Box>
                       <Typography variant="h6" fontWeight={700} color="primary">
-                        ₹{tableOrders.total.toFixed(2)}
+                        ₹{bill.total.toFixed(2)}
                       </Typography>
                     </Box>
                   </AccordionSummary>
                   <AccordionDetails>
                     {/* Order Details */}
-                    {tableOrders.orders.map((order, index) => (
+                    {bill.orders.map((order, index) => (
                       <Card key={order.id} variant="outlined" sx={{ mb: 2 }}>
                         <CardContent>
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -589,7 +627,7 @@ function DashboardContent() {
                         variant="outlined"
                         color="error"
                         startIcon={<DeleteIcon />}
-                        onClick={() => openDeleteDialog('bill', undefined, tableOrders)}
+                        onClick={() => openDeleteDialog('bill', undefined, bill)}
                       >
                         Delete Bill
                       </Button>
@@ -598,10 +636,10 @@ function DashboardContent() {
                           variant="contained"
                           color="success"
                           startIcon={<CheckCircleIcon />}
-                          onClick={() => handleSettleBill(tableOrders)}
-                          disabled={settlingBill === tableOrders.table_number}
+                          onClick={() => handleSettleBill(bill)}
+                          disabled={settlingBill === bill.bill_id}
                         >
-                          {settlingBill === tableOrders.table_number ? 'Settling...' : 'Settle Bill'}
+                          {settlingBill === bill.bill_id ? 'Settling...' : 'Settle Bill'}
                         </Button>
                       )}
                     </Box>
