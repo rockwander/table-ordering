@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Grid,
@@ -57,12 +57,54 @@ function DashboardContent() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [buzzerNotifications, setBuzzerNotifications] = useState<BuzzerNotificationType[]>([]);
+  const [audioContextReady, setAudioContextReady] = useState(false);
+  const audioContextRef = React.useRef<AudioContext | null>(null);
   const [stats, setStats] = useState({
     todayOrders: 0,
     todayRevenue: 0,
     pendingOrders: 0,
     activeOrders: 0,
   });
+
+  // Initialize AudioContext on user interaction
+  useEffect(() => {
+    const initAudio = async () => {
+      try {
+        if (!audioContextRef.current) {
+          audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+          console.log('🔊 AudioContext created, state:', audioContextRef.current.state);
+        }
+
+        if (audioContextRef.current.state === 'suspended') {
+          await audioContextRef.current.resume();
+          console.log('🔊 AudioContext resumed');
+        }
+
+        setAudioContextReady(true);
+      } catch (error) {
+        console.error('❌ Failed to initialize audio:', error);
+      }
+    };
+
+    // Try to initialize audio on any user interaction
+    const handleUserInteraction = () => {
+      initAudio();
+      // Remove listeners after first interaction
+      window.removeEventListener('click', handleUserInteraction);
+      window.removeEventListener('keydown', handleUserInteraction);
+      window.removeEventListener('touchstart', handleUserInteraction);
+    };
+
+    window.addEventListener('click', handleUserInteraction);
+    window.addEventListener('keydown', handleUserInteraction);
+    window.addEventListener('touchstart', handleUserInteraction);
+
+    return () => {
+      window.removeEventListener('click', handleUserInteraction);
+      window.removeEventListener('keydown', handleUserInteraction);
+      window.removeEventListener('touchstart', handleUserInteraction);
+    };
+  }, []);
 
   useEffect(() => {
     console.log('🚀 Dashboard mounted, setting up subscriptions...');
@@ -212,6 +254,7 @@ function DashboardContent() {
         <BuzzerNotification
           key={notification.id}
           tableNumber={notification.table_number}
+          audioContext={audioContextRef.current}
           onDismiss={() => handleDismissBuzzer(notification.id)}
         />
       ))}

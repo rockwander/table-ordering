@@ -33,10 +33,11 @@ const pulseAnimation = keyframes`
 
 interface BuzzerNotificationProps {
   tableNumber: number;
+  audioContext: AudioContext | null;
   onDismiss: () => void;
 }
 
-export default function BuzzerNotification({ tableNumber, onDismiss }: BuzzerNotificationProps) {
+export default function BuzzerNotification({ tableNumber, audioContext, onDismiss }: BuzzerNotificationProps) {
   const [ringCount, setRingCount] = useState(0);
 
   useEffect(() => {
@@ -47,10 +48,13 @@ export default function BuzzerNotification({ tableNumber, onDismiss }: BuzzerNot
     const timeouts: NodeJS.Timeout[] = [];
 
     const playBeep = async () => {
-      try {
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      if (!audioContext) {
+        console.warn('⚠️ AudioContext not available');
+        return;
+      }
 
-        // Resume audio context if it's suspended (required by browser autoplay policies)
+      try {
+        // Resume audio context if it's suspended
         if (audioContext.state === 'suspended') {
           await audioContext.resume();
         }
@@ -70,7 +74,7 @@ export default function BuzzerNotification({ tableNumber, onDismiss }: BuzzerNot
         oscillator.start(audioContext.currentTime);
         oscillator.stop(audioContext.currentTime + 0.5);
 
-        console.log('🔊 Beep played');
+        console.log('🔊 Beep played successfully');
       } catch (error) {
         console.error('❌ Audio error:', error);
       }
@@ -95,7 +99,7 @@ export default function BuzzerNotification({ tableNumber, onDismiss }: BuzzerNot
       timeouts.forEach(t => clearTimeout(t));
       clearTimeout(dismissTimeout);
     };
-  }, [onDismiss, tableNumber]);
+  }, [onDismiss, tableNumber, audioContext]);
 
   return (
     <Paper
