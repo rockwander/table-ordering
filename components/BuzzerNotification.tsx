@@ -39,62 +39,101 @@ interface BuzzerNotificationProps {
 
 export default function BuzzerNotification({ tableNumber, onDismiss }: BuzzerNotificationProps) {
   const [ringCount, setRingCount] = useState(0);
-  const audioRef = React.useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     console.log('🔔 BuzzerNotification mounted for Table', tableNumber);
 
-    // Create a simple beep sound using data URL
-    // This is a base64 encoded WAV file of a short beep
-    const beepDataUrl = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZSA0PVqzn77BdGAg+ltryxnMnBSl+zPLaizsIGGS57OihUhELTKXh8bllHAU2jdXzzn0vBSZ7yvDZiTcIGGW67OajUhELS6Xh8bplHAU2jdXzzn0vBSZ7yvDZiTcIGGa67OajUhELS6Xh8bplHAU2jdXzzn0vBSZ7yvDZiTcIGGa67OajUhELS6Xh8bplHAU2jdXzzn0vBSZ7yvDZiTcIGGa67OajUhELS6Xh8bplHAU2jdXzzn0vBSZ7yvDZiTcIGGa67OajUhELS6Xh8bplHAU2jdXzzn0vBSZ7yvDZiTcIGGa67OajUhELS6Xh8bplHAU2jdXzzn0vBSZ7yvDZiTcI';
-
-    // Try to create and play audio
-    if (!audioRef.current) {
-      audioRef.current = new Audio(beepDataUrl);
-      audioRef.current.volume = 0.3;
-    }
-
-    // Play ring animation 3 times (every 2 seconds for 6 seconds total)
-    const ringIntervals = [0, 2000, 4000];
+    // Play ring animation 5 times over 10 seconds
+    const ringIntervals = [0, 2000, 4000, 6000, 8000];
     const timeouts: NodeJS.Timeout[] = [];
 
-    const playBeep = () => {
+    // Create a buzzing bell sound using Web Audio API
+    const playBuzzingBell = () => {
       try {
-        if (audioRef.current) {
-          // Clone and play the audio to allow multiple concurrent plays
-          const sound = audioRef.current.cloneNode() as HTMLAudioElement;
-          sound.volume = 0.3;
-          const playPromise = sound.play();
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
 
-          if (playPromise !== undefined) {
-            playPromise
-              .then(() => {
-                console.log('🔊 Beep played successfully');
-              })
-              .catch((error) => {
-                console.warn('⚠️ Audio play blocked (user interaction required):', error.message);
-              });
-          }
-        }
-      } catch (error) {
-        console.error('❌ Audio error:', error);
+        // Create a complex buzzer sound with multiple frequencies
+        const createBuzzer = (startTime: number, duration: number) => {
+          // Main bell frequency (around 800Hz)
+          const osc1 = audioContext.createOscillator();
+          const gain1 = audioContext.createGain();
+
+          osc1.frequency.value = 800;
+          osc1.type = 'sine';
+
+          // Second harmonic for richness
+          const osc2 = audioContext.createOscillator();
+          const gain2 = audioContext.createGain();
+
+          osc2.frequency.value = 1200;
+          osc2.type = 'sine';
+
+          // Buzzing modulation
+          const lfo = audioContext.createOscillator();
+          const lfoGain = audioContext.createGain();
+
+          lfo.frequency.value = 15; // 15Hz tremolo for buzzing effect
+          lfoGain.gain.value = 0.3;
+
+          lfo.connect(lfoGain);
+          lfoGain.connect(gain1.gain);
+          lfoGain.connect(gain2.gain);
+
+          // Connect oscillators
+          osc1.connect(gain1);
+          osc2.connect(gain2);
+          gain1.connect(audioContext.destination);
+          gain2.connect(audioContext.destination);
+
+          // Envelope - quick attack, sustained, quick release
+          const now = audioContext.currentTime + startTime;
+
+          gain1.gain.setValueAtTime(0, now);
+          gain1.gain.linearRampToValueAtTime(0.4, now + 0.01);
+          gain1.gain.setValueAtTime(0.4, now + duration - 0.05);
+          gain1.gain.exponentialRampToValueAtTime(0.01, now + duration);
+
+          gain2.gain.setValueAtTime(0, now);
+          gain2.gain.linearRampToValueAtTime(0.2, now + 0.01);
+          gain2.gain.setValueAtTime(0.2, now + duration - 0.05);
+          gain2.gain.exponentialRampToValueAtTime(0.01, now + duration);
+
+          // Start oscillators
+          osc1.start(now);
+          osc2.start(now);
+          lfo.start(now);
+
+          // Stop oscillators
+          osc1.stop(now + duration);
+          osc2.stop(now + duration);
+          lfo.stop(now + duration);
+        };
+
+        // Create a rapid buzzing pattern (3 short buzzes)
+        createBuzzer(0, 0.15);
+        createBuzzer(0.2, 0.15);
+        createBuzzer(0.4, 0.15);
+
+        console.log('🔊 Buzzing bell played successfully');
+      } catch (error: any) {
+        console.warn('⚠️ Audio play blocked (user interaction required):', error.message);
       }
     };
 
     ringIntervals.forEach((delay, index) => {
       const timeout = setTimeout(() => {
-        console.log(`🔔 Ring ${index + 1} of 3`);
+        console.log(`🔔 Ring ${index + 1} of ${ringIntervals.length}`);
         setRingCount(prev => prev + 1);
-        playBeep();
+        playBuzzingBell();
       }, delay);
       timeouts.push(timeout);
     });
 
-    // Auto-dismiss after 6 seconds
+    // Auto-dismiss after 10 seconds
     const dismissTimeout = setTimeout(() => {
       console.log('✅ Auto-dismissing buzzer notification');
       onDismiss();
-    }, 6000);
+    }, 10000);
 
     return () => {
       timeouts.forEach(t => clearTimeout(t));
