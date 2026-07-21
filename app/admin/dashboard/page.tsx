@@ -89,8 +89,6 @@ function DashboardContent() {
   const [orders, setOrders] = useState<OrderWithItems[]>([]);
   const [loading, setLoading] = useState(true);
   const [buzzerNotifications, setBuzzerNotifications] = useState<BuzzerNotificationType[]>([]);
-  const [currentNotification, setCurrentNotification] = useState<BuzzerNotificationType | null>(null);
-  const [notificationQueue, setNotificationQueue] = useState<BuzzerNotificationType[]>([]);
   const [viewTab, setViewTab] = useState<'unsettled' | 'settled'>('unsettled');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'order' | 'bill'; id?: string; bill?: Bill } | null>(null);
@@ -102,14 +100,6 @@ function DashboardContent() {
     monthlyRevenue: 0,
   });
 
-  // Handle notification queue - show one at a time
-  useEffect(() => {
-    if (!currentNotification && notificationQueue.length > 0) {
-      const [nextNotification, ...rest] = notificationQueue;
-      setCurrentNotification(nextNotification);
-      setNotificationQueue(rest);
-    }
-  }, [currentNotification, notificationQueue]);
 
   useEffect(() => {
     console.log('🚀 Dashboard mounted, setting up subscriptions...');
@@ -163,8 +153,6 @@ function DashboardContent() {
           if (newNotification.status === 'active') {
             console.log('✅ Adding buzzer notification for table:', newNotification.table_number);
             setBuzzerNotifications((prev) => [...prev, newNotification]);
-            // Add to queue instead of showing directly
-            setNotificationQueue((prev) => [...prev, newNotification]);
           }
         }
       )
@@ -276,9 +264,6 @@ function DashboardContent() {
       setBuzzerNotifications((prev) =>
         prev.filter((notification) => notification.id !== notificationId)
       );
-
-      // Clear current notification to allow next one to show
-      setCurrentNotification(null);
     } catch (error) {
       console.error('❌ Error dismissing buzzer notification:', error);
     }
@@ -439,83 +424,84 @@ function DashboardContent() {
 
   return (
     <Box>
-      {/* Buzzer Notifications - Show one at a time */}
-      {currentNotification && (
+      {/* Buzzer Notifications - Stacked */}
+      {buzzerNotifications.map((notification, index) => (
         <BuzzerNotification
-          key={currentNotification.id}
-          tableNumber={currentNotification.table_number}
-          notificationType={currentNotification.notification_type}
-          onDismiss={() => handleDismissBuzzer(currentNotification.id)}
+          key={notification.id}
+          tableNumber={notification.table_number}
+          notificationType={notification.notification_type}
+          onDismiss={() => handleDismissBuzzer(notification.id)}
+          index={index}
         />
-      )}
+      ))}
 
-      <Typography variant="h4" fontWeight={700} gutterBottom>
+      <Typography variant="h4" fontWeight={700} gutterBottom sx={{ fontSize: { xs: '1.75rem', sm: '2.125rem' } }}>
         Dashboard
       </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+      <Typography variant="body1" color="text.secondary" sx={{ mb: 4, display: { xs: 'none', sm: 'block' } }}>
         Welcome to Ramani's Cafe Admin Panel
       </Typography>
 
       {/* Stats Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
+      <Grid container spacing={{ xs: 2, sm: 3 }} sx={{ mb: { xs: 3, sm: 4 } }}>
+        <Grid item xs={6} sm={6} md={3}>
           <Card>
-            <CardContent>
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <ReceiptLongIcon color="primary" sx={{ mr: 1 }} />
-                <Typography variant="body2" color="text.secondary">
+                <ReceiptLongIcon color="primary" sx={{ mr: 1, fontSize: { xs: 20, sm: 24 } }} />
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                   Today's Orders
                 </Typography>
               </Box>
-              <Typography variant="h4" fontWeight={700}>
+              <Typography variant="h4" fontWeight={700} sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
                 {stats.todayOrders}
               </Typography>
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={6} sm={6} md={3}>
           <Card>
-            <CardContent>
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <CurrencyRupeeIcon color="success" sx={{ mr: 1 }} />
-                <Typography variant="body2" color="text.secondary">
+                <CurrencyRupeeIcon color="success" sx={{ mr: 1, fontSize: { xs: 20, sm: 24 } }} />
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                   Today's Revenue
                 </Typography>
               </Box>
-              <Typography variant="h4" fontWeight={700} color="success.main">
+              <Typography variant="h4" fontWeight={700} color="success.main" sx={{ fontSize: { xs: '1.25rem', sm: '2.125rem' } }}>
                 ₹{stats.todayRevenue.toFixed(2)}
               </Typography>
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={6} sm={6} md={3}>
           <Card>
-            <CardContent>
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <TrendingUpIcon color="info" sx={{ mr: 1 }} />
-                <Typography variant="body2" color="text.secondary">
+                <TrendingUpIcon color="info" sx={{ mr: 1, fontSize: { xs: 20, sm: 24 } }} />
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                   Monthly Orders
                 </Typography>
               </Box>
-              <Typography variant="h4" fontWeight={700} color="info.main">
+              <Typography variant="h4" fontWeight={700} color="info.main" sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
                 {stats.monthlyOrders}
               </Typography>
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={6} sm={6} md={3}>
           <Card>
-            <CardContent>
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <CurrencyRupeeIcon color="primary" sx={{ mr: 1 }} />
-                <Typography variant="body2" color="text.secondary">
+                <CurrencyRupeeIcon color="primary" sx={{ mr: 1, fontSize: { xs: 20, sm: 24 } }} />
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                   Monthly Revenue
                 </Typography>
               </Box>
-              <Typography variant="h4" fontWeight={700} color="primary.main">
+              <Typography variant="h4" fontWeight={700} color="primary.main" sx={{ fontSize: { xs: '1.25rem', sm: '2.125rem' } }}>
                 ₹{stats.monthlyRevenue.toFixed(2)}
               </Typography>
             </CardContent>
@@ -526,18 +512,18 @@ function DashboardContent() {
       {/* Orders Section with Tabs */}
       <Card>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={viewTab} onChange={(e, newValue) => setViewTab(newValue)}>
-            <Tab label="Unsettled Orders" value="unsettled" />
-            <Tab label="Settled Orders" value="settled" />
+          <Tabs value={viewTab} onChange={(e, newValue) => setViewTab(newValue)} variant="fullWidth">
+            <Tab label="Unsettled Orders" value="unsettled" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />
+            <Tab label="Settled Orders" value="settled" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />
           </Tabs>
         </Box>
 
-        <CardContent>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h6" fontWeight={700}>
+        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+            <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
               {viewTab === 'unsettled' ? 'Unsettled Orders' : 'Settled Bills'}
             </Typography>
-            <Button variant="outlined" onClick={() => router.push('/admin/orders')}>
+            <Button variant="outlined" onClick={() => router.push('/admin/orders')} size={window.innerWidth < 600 ? 'small' : 'medium'}>
               View History
             </Button>
           </Box>
@@ -553,19 +539,19 @@ function DashboardContent() {
               {bills.map((bill) => (
                 <Accordion key={bill.bill_id} defaultExpanded={viewTab === 'unsettled'} sx={{ mb: 2 }}>
                   <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', pr: 2 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Chip label={`Table ${bill.table_number}`} color="primary" />
-                        <Typography variant="body1" fontWeight={600}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', pr: 2, flexWrap: 'wrap', gap: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 }, flexWrap: 'wrap' }}>
+                        <Chip label={`Table ${bill.table_number}`} color="primary" size="small" />
+                        <Typography variant="body1" fontWeight={600} sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
                           {bill.orders.length} order{bill.orders.length !== 1 ? 's' : ''}
                         </Typography>
                         {bill.settled_at && (
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                             {new Date(bill.settled_at).toLocaleString()}
                           </Typography>
                         )}
                       </Box>
-                      <Typography variant="h6" fontWeight={700} color="primary">
+                      <Typography variant="h6" fontWeight={700} color="primary" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                         ₹{bill.total.toFixed(2)}
                       </Typography>
                     </Box>
@@ -648,12 +634,13 @@ function DashboardContent() {
                     ))}
 
                     {/* Bill Actions */}
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mt: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mt: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
                       <Button
                         variant="outlined"
                         color="error"
                         startIcon={<DeleteIcon />}
                         onClick={() => openDeleteDialog('bill', undefined, bill)}
+                        fullWidth={window.innerWidth < 600}
                       >
                         Delete Bill
                       </Button>
@@ -664,6 +651,7 @@ function DashboardContent() {
                           startIcon={<CheckCircleIcon />}
                           onClick={() => handleSettleBill(bill)}
                           disabled={settlingBill === bill.bill_id}
+                          fullWidth={window.innerWidth < 600}
                         >
                           {settlingBill === bill.bill_id ? 'Settling...' : 'Settle Bill'}
                         </Button>

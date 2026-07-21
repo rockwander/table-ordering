@@ -61,9 +61,10 @@ interface BuzzerNotificationProps {
   notificationType: NotificationType;
   audioContext?: AudioContext | null;
   onDismiss: () => void;
+  index: number;
 }
 
-export default function BuzzerNotification({ tableNumber, notificationType, onDismiss }: BuzzerNotificationProps) {
+export default function BuzzerNotification({ tableNumber, notificationType, onDismiss, index }: BuzzerNotificationProps) {
   const [ringCount, setRingCount] = useState(0);
   const config = notificationConfigs[notificationType];
 
@@ -108,33 +109,32 @@ export default function BuzzerNotification({ tableNumber, notificationType, onDi
       timeouts.push(timeout);
     });
 
-    // Auto-dismiss after 10 seconds
-    const dismissTimeout = setTimeout(() => {
-      console.log('✅ Auto-dismissing buzzer notification');
-      onDismiss();
-    }, 10000);
-
     return () => {
       timeouts.forEach(t => clearTimeout(t));
-      clearTimeout(dismissTimeout);
     };
   }, [onDismiss, tableNumber, notificationType, config.soundUrl]);
 
   return (
     <Paper
       elevation={8}
+      onClick={onDismiss}
       sx={{
         position: 'fixed',
-        top: 80,
-        right: 24,
-        zIndex: 2000,
-        p: 3,
-        minWidth: 280,
+        top: { xs: 70 + (index * 120), sm: 80 + (index * 120) },
+        right: { xs: 16, sm: 24 },
+        left: { xs: 16, sm: 'auto' },
+        zIndex: 2000 + index,
+        p: { xs: 2, sm: 3 },
+        minWidth: { xs: 'auto', sm: 280 },
         bgcolor: config.color,
         color: 'white',
         animation: `${pulseAnimation} 1s ease-in-out infinite`,
         border: '2px solid',
         borderColor: 'rgba(0,0,0,0.2)',
+        cursor: 'pointer',
+        '&:hover': {
+          opacity: 0.9,
+        },
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -146,15 +146,18 @@ export default function BuzzerNotification({ tableNumber, notificationType, onDi
         >
           {config.icon}
         </Box>
-        <Box>
-          <Typography variant="h6" fontWeight={700}>
+        <Box sx={{ flex: 1 }}>
+          <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
             {config.title}
           </Typography>
-          <Typography variant="h4" fontWeight={700} sx={{ mt: 0.5 }}>
+          <Typography variant="h4" fontWeight={700} sx={{ mt: 0.5, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
             Table {tableNumber}
           </Typography>
         </Box>
       </Box>
+      <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', mt: 1, opacity: 0.8 }}>
+        Click to dismiss
+      </Typography>
     </Paper>
   );
 }
