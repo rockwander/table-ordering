@@ -273,6 +273,22 @@ function OrdersContent() {
 
       if (error) throw error;
 
+      // Create buzzer notification for settled bill
+      const { error: buzzerError } = await supabase
+        .from('buzzer_notifications')
+        .insert({
+          table_number: selectedTable.table_number,
+          status: 'active',
+          notification_type: 'settle_bill',
+        });
+
+      if (buzzerError) {
+        console.error('❌ Error creating buzzer notification:', buzzerError);
+        // Don't throw - bill was settled successfully, just notification failed
+      } else {
+        console.log('✅ Buzzer notification sent for settled bill');
+      }
+
       await fetchOrders();
       handleCloseTable();
     } catch (error) {

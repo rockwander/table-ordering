@@ -57,12 +57,23 @@ function DashboardContent() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [buzzerNotifications, setBuzzerNotifications] = useState<BuzzerNotificationType[]>([]);
+  const [currentNotification, setCurrentNotification] = useState<BuzzerNotificationType | null>(null);
+  const [notificationQueue, setNotificationQueue] = useState<BuzzerNotificationType[]>([]);
   const [stats, setStats] = useState({
     todayOrders: 0,
     todayRevenue: 0,
     pendingOrders: 0,
     activeOrders: 0,
   });
+
+  // Handle notification queue - show one at a time
+  useEffect(() => {
+    if (!currentNotification && notificationQueue.length > 0) {
+      const [nextNotification, ...rest] = notificationQueue;
+      setCurrentNotification(nextNotification);
+      setNotificationQueue(rest);
+    }
+  }, [currentNotification, notificationQueue]);
 
   useEffect(() => {
     console.log('🚀 Dashboard mounted, setting up subscriptions...');
@@ -103,6 +114,8 @@ function DashboardContent() {
           if (newNotification.status === 'active') {
             console.log('✅ Adding buzzer notification for table:', newNotification.table_number);
             setBuzzerNotifications((prev) => [...prev, newNotification]);
+            // Add to queue instead of showing directly
+            setNotificationQueue((prev) => [...prev, newNotification]);
           }
         }
       )
@@ -192,6 +205,9 @@ function DashboardContent() {
       setBuzzerNotifications((prev) =>
         prev.filter((notification) => notification.id !== notificationId)
       );
+
+      // Clear current notification to allow next one to show
+      setCurrentNotification(null);
     } catch (error) {
       console.error('❌ Error dismissing buzzer notification:', error);
     }
@@ -207,14 +223,15 @@ function DashboardContent() {
 
   return (
     <Box>
-      {/* Buzzer Notifications */}
-      {buzzerNotifications.map((notification) => (
+      {/* Buzzer Notifications - Show one at a time */}
+      {currentNotification && (
         <BuzzerNotification
-          key={notification.id}
-          tableNumber={notification.table_number}
-          onDismiss={() => handleDismissBuzzer(notification.id)}
+          key={currentNotification.id}
+          tableNumber={currentNotification.table_number}
+          notificationType={currentNotification.notification_type}
+          onDismiss={() => handleDismissBuzzer(currentNotification.id)}
         />
-      ))}
+      )}
 
       <Typography variant="h4" fontWeight={700} gutterBottom>
         Dashboard

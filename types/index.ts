@@ -88,6 +88,7 @@ export type BuzzerNotification = {
   id: string;
   table_number: number;
   status: 'active' | 'dismissed';
+  notification_type: 'service_call' | 'new_order' | 'settle_bill';
   created_at: string;
   dismissed_at: string | null;
 };

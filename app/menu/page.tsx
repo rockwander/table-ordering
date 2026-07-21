@@ -133,6 +133,7 @@ function MenuContent() {
         .insert({
           table_number: parseInt(tableNumber),
           status: 'active',
+          notification_type: 'service_call',
         })
         .select();
 

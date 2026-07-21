@@ -159,6 +159,22 @@ function CartContent() {
 
       if (itemsError) throw itemsError;
 
+      // Create buzzer notification for new order
+      const { error: buzzerError } = await supabase
+        .from('buzzer_notifications')
+        .insert({
+          table_number: parseInt(tableNumber!),
+          status: 'active',
+          notification_type: 'new_order',
+        });
+
+      if (buzzerError) {
+        console.error('❌ Error creating buzzer notification:', buzzerError);
+        // Don't throw - order was created successfully, just notification failed
+      } else {
+        console.log('✅ Buzzer notification sent for new order');
+      }
+
       // Clear cart, refresh outstanding orders, and stay on cart page
       clearCart();
       setOrderNotes('');
