@@ -17,11 +17,25 @@ import {
   TableRow,
   Paper,
   CircularProgress,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Tabs,
+  Tab,
+  Alert,
+  Divider,
 } from '@mui/material';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
-import PendingActionsIcon from '@mui/icons-material/PendingActions';
 import CurrencyRupeeIcon from '@mui/icons-material/CurrencyRupee';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import DeleteIcon from '@mui/icons-material/Delete';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminLayout from '@/components/AdminLayout';
@@ -52,18 +66,38 @@ const statusColors: Record<OrderStatus, 'default' | 'primary' | 'secondary' | 'e
   cancelled: 'error',
 };
 
+interface OrderWithItems extends Order {
+  order_items: Array<{
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+    special_instructions: string | null;
+  }>;
+}
+
+interface TableOrders {
+  table_number: number;
+  orders: OrderWithItems[];
+  total: number;
+}
+
 function DashboardContent() {
   const router = useRouter();
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<OrderWithItems[]>([]);
   const [loading, setLoading] = useState(true);
   const [buzzerNotifications, setBuzzerNotifications] = useState<BuzzerNotificationType[]>([]);
   const [currentNotification, setCurrentNotification] = useState<BuzzerNotificationType | null>(null);
   const [notificationQueue, setNotificationQueue] = useState<BuzzerNotificationType[]>([]);
+  const [viewTab, setViewTab] = useState<'unsettled' | 'settled'>('unsettled');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'order' | 'bill'; id?: string; tableOrders?: TableOrders } | null>(null);
+  const [settlingBill, setSettlingBill] = useState<number | null>(null);
   const [stats, setStats] = useState({
     todayOrders: 0,
     todayRevenue: 0,
-    pendingOrders: 0,
-    activeOrders: 0,
+    monthlyOrders: 0,
+    monthlyRevenue: 0,
   });
 
   // Handle notification queue - show one at a time
@@ -147,49 +181,58 @@ function DashboardContent() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      // Fetch ALL today's orders for accurate stats calculation
-      const { data: allOrdersData, error: allOrdersError } = await supabase
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+
+      // Fetch today's orders with items
+      const { data: todayOrdersData, error: todayOrdersError } = await supabase
         .from('orders')
-        .select('*')
+        .select(`
+          *,
+          order_items (*)
+        `)
         .gte('created_at', today.toISOString())
         .order('created_at', { ascending: false });
 
-      if (allOrdersError) throw allOrdersError;
+      if (todayOrdersError) throw todayOrdersError;
 
-      const allOrders: Order[] = allOrdersData || [];
+      const todayOrders: OrderWithItems[] = todayOrdersData || [];
+      setOrders(todayOrders);
 
-      // Fetch recent 10 orders for display
-      const recentOrders = allOrders.slice(0, 10);
-      setOrders(recentOrders);
+      // Fetch this month's orders for stats
+      const { data: monthOrdersData, error: monthOrdersError } = await supabase
+        .from('orders')
+        .select('*')
+        .gte('created_at', monthStart.toISOString());
 
-      // Calculate stats from ALL orders, not just the recent 10
-      const todayOrders = allOrders.length || 0;
+      if (monthOrdersError) throw monthOrdersError;
+
+      const monthOrders = monthOrdersData || [];
+
+      // Calculate stats
+      const todayOrdersCount = todayOrders.length || 0;
       const todayRevenue =
-        allOrders
+        todayOrders
           .filter((o) => o.status === 'paid')
           .reduce((sum, o) => sum + o.total, 0) || 0;
-      const pendingOrders =
-        allOrders.filter((o) => o.status === 'pending').length || 0;
-      const activeOrders =
-        allOrders.filter((o) =>
-          ['pending', 'confirmed', 'preparing', 'ready'].includes(o.status)
-        ).length || 0;
+      const monthlyOrdersCount = monthOrders.length || 0;
+      const monthlyRevenue =
+        monthOrders
+          .filter((o) => o.status === 'paid')
+          .reduce((sum, o) => sum + o.total, 0) || 0;
 
       setStats({
-        todayOrders,
+        todayOrders: todayOrdersCount,
         todayRevenue,
-        pendingOrders,
-        activeOrders,
+        monthlyOrders: monthlyOrdersCount,
+        monthlyRevenue,
       });
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleViewOrder = (orderId: string) => {
-    router.push(`/admin/orders?orderId=${orderId}`);
   };
 
   const handleDismissBuzzer = async (notificationId: string) => {
@@ -213,6 +256,118 @@ function DashboardContent() {
     }
   };
 
+  const groupOrdersByTable = (): TableOrders[] => {
+    const filteredOrders = orders.filter(order =>
+      viewTab === 'unsettled' ? order.status !== 'paid' : order.status === 'paid'
+    );
+
+    const grouped = filteredOrders.reduce((acc, order) => {
+      const tableNum = order.table_number;
+      if (!acc[tableNum]) {
+        acc[tableNum] = [];
+      }
+      acc[tableNum].push(order);
+      return acc;
+    }, {} as Record<number, OrderWithItems[]>);
+
+    return Object.entries(grouped).map(([tableNum, orders]) => ({
+      table_number: parseInt(tableNum),
+      orders: orders.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
+      total: orders.reduce((sum, order) => sum + order.total, 0),
+    })).sort((a, b) => a.table_number - b.table_number);
+  };
+
+  const handleSettleBill = async (tableOrders: TableOrders) => {
+    setSettlingBill(tableOrders.table_number);
+    try {
+      const orderIds = tableOrders.orders.map(order => order.id);
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: 'paid', updated_at: new Date().toISOString() })
+        .in('id', orderIds);
+
+      if (error) throw error;
+
+      await fetchDashboardData();
+    } catch (error) {
+      console.error('Error settling bill:', error);
+      alert('Failed to settle bill');
+    } finally {
+      setSettlingBill(null);
+    }
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    try {
+      // Delete order items first
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .delete()
+        .eq('order_id', orderId);
+
+      if (itemsError) throw itemsError;
+
+      // Delete order
+      const { error: orderError } = await supabase
+        .from('orders')
+        .delete()
+        .eq('id', orderId);
+
+      if (orderError) throw orderError;
+
+      await fetchDashboardData();
+      setDeleteDialogOpen(false);
+      setDeleteTarget(null);
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      alert('Failed to delete order');
+    }
+  };
+
+  const handleDeleteBill = async (tableOrders: TableOrders) => {
+    try {
+      const orderIds = tableOrders.orders.map(order => order.id);
+
+      // Delete all order items
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .delete()
+        .in('order_id', orderIds);
+
+      if (itemsError) throw itemsError;
+
+      // Delete all orders
+      const { error: ordersError } = await supabase
+        .from('orders')
+        .delete()
+        .in('id', orderIds);
+
+      if (ordersError) throw ordersError;
+
+      await fetchDashboardData();
+      setDeleteDialogOpen(false);
+      setDeleteTarget(null);
+    } catch (error) {
+      console.error('Error deleting bill:', error);
+      alert('Failed to delete bill');
+    }
+  };
+
+  const openDeleteDialog = (type: 'order' | 'bill', id?: string, tableOrders?: TableOrders) => {
+    setDeleteTarget({ type, id, tableOrders });
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+
+    if (deleteTarget.type === 'order' && deleteTarget.id) {
+      handleDeleteOrder(deleteTarget.id);
+    } else if (deleteTarget.type === 'bill' && deleteTarget.tableOrders) {
+      handleDeleteBill(deleteTarget.tableOrders);
+    }
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
@@ -220,6 +375,8 @@ function DashboardContent() {
       </Box>
     );
   }
+
+  const tableGroups = groupOrdersByTable();
 
   return (
     <Box>
@@ -278,13 +435,13 @@ function DashboardContent() {
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <PendingActionsIcon color="warning" sx={{ mr: 1 }} />
+                <TrendingUpIcon color="info" sx={{ mr: 1 }} />
                 <Typography variant="body2" color="text.secondary">
-                  Pending Orders
+                  Monthly Orders
                 </Typography>
               </Box>
-              <Typography variant="h4" fontWeight={700} color="warning.main">
-                {stats.pendingOrders}
+              <Typography variant="h4" fontWeight={700} color="info.main">
+                {stats.monthlyOrders}
               </Typography>
             </CardContent>
           </Card>
@@ -294,94 +451,183 @@ function DashboardContent() {
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <TrendingUpIcon color="info" sx={{ mr: 1 }} />
+                <CurrencyRupeeIcon color="primary" sx={{ mr: 1 }} />
                 <Typography variant="body2" color="text.secondary">
-                  Active Orders
+                  Monthly Revenue
                 </Typography>
               </Box>
-              <Typography variant="h4" fontWeight={700} color="info.main">
-                {stats.activeOrders}
+              <Typography variant="h4" fontWeight={700} color="primary.main">
+                ₹{stats.monthlyRevenue.toFixed(2)}
               </Typography>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
-      {/* Recent Orders */}
+      {/* Orders Section with Tabs */}
       <Card>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs value={viewTab} onChange={(e, newValue) => setViewTab(newValue)}>
+            <Tab label="Unsettled Orders" value="unsettled" />
+            <Tab label="Settled Orders" value="settled" />
+          </Tabs>
+        </Box>
+
         <CardContent>
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              mb: 3,
-            }}
-          >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
             <Typography variant="h6" fontWeight={700}>
-              Recent Orders
+              {viewTab === 'unsettled' ? 'Unsettled Orders' : 'Settled Bills'}
             </Typography>
             <Button variant="outlined" onClick={() => router.push('/admin/orders')}>
-              View All
+              View History
             </Button>
           </Box>
 
-          {orders.length === 0 ? (
+          {tableGroups.length === 0 ? (
             <Box sx={{ textAlign: 'center', py: 4 }}>
-              <Typography color="text.secondary">No orders today</Typography>
+              <Typography color="text.secondary">
+                No {viewTab} orders
+              </Typography>
             </Box>
           ) : (
-            <TableContainer component={Paper} variant="outlined">
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Order ID</TableCell>
-                    <TableCell>Table</TableCell>
-                    <TableCell>Total</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Time</TableCell>
-                    <TableCell align="right">Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {orders.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell>
-                        <Typography variant="body2" fontFamily="monospace">
-                          #{order.id.slice(0, 8)}
+            <Box>
+              {tableGroups.map((tableOrders) => (
+                <Accordion key={tableOrders.table_number} sx={{ mb: 2 }}>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', pr: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Chip label={`Table ${tableOrders.table_number}`} color="primary" />
+                        <Typography variant="body1" fontWeight={600}>
+                          {tableOrders.orders.length} order{tableOrders.orders.length !== 1 ? 's' : ''}
                         </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Chip label={`Table ${order.table_number}`} size="small" />
-                      </TableCell>
-                      <TableCell>
-                        <Typography fontWeight={600}>₹{order.total.toFixed(2)}</Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={statusLabels[order.status]}
-                          color={statusColors[order.status]}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" color="text.secondary">
-                          {new Date(order.created_at).toLocaleTimeString()}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Button size="small" onClick={() => handleViewOrder(order.id)}>
-                          View
+                      </Box>
+                      <Typography variant="h6" fontWeight={700} color="primary">
+                        ₹{tableOrders.total.toFixed(2)}
+                      </Typography>
+                    </Box>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    {/* Order Details */}
+                    {tableOrders.orders.map((order, index) => (
+                      <Card key={order.id} variant="outlined" sx={{ mb: 2 }}>
+                        <CardContent>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                            <Box>
+                              <Typography variant="subtitle1" fontWeight={600}>
+                                Order #{index + 1}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {new Date(order.created_at).toLocaleString()}
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                              <Chip
+                                label={statusLabels[order.status]}
+                                color={statusColors[order.status]}
+                                size="small"
+                              />
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => openDeleteDialog('order', order.id)}
+                              >
+                                <DeleteIcon />
+                              </IconButton>
+                            </Box>
+                          </Box>
+
+                          <Divider sx={{ my: 2 }} />
+
+                          {/* Order Items */}
+                          <TableContainer>
+                            <Table size="small">
+                              <TableHead>
+                                <TableRow>
+                                  <TableCell>Item</TableCell>
+                                  <TableCell align="center">Qty</TableCell>
+                                  <TableCell align="right">Price</TableCell>
+                                  <TableCell align="right">Total</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {order.order_items.map((item) => (
+                                  <TableRow key={item.id}>
+                                    <TableCell>
+                                      <Typography variant="body2">{item.name}</Typography>
+                                      {item.special_instructions && (
+                                        <Typography variant="caption" color="text.secondary">
+                                          Note: {item.special_instructions}
+                                        </Typography>
+                                      )}
+                                    </TableCell>
+                                    <TableCell align="center">{item.quantity}</TableCell>
+                                    <TableCell align="right">₹{item.price.toFixed(2)}</TableCell>
+                                    <TableCell align="right">₹{(item.price * item.quantity).toFixed(2)}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+
+                          <Divider sx={{ my: 2 }} />
+
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <Typography variant="body1" fontWeight={600}>
+                              Order Total
+                            </Typography>
+                            <Typography variant="body1" fontWeight={700} color="primary">
+                              ₹{order.total.toFixed(2)}
+                            </Typography>
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    ))}
+
+                    {/* Bill Actions */}
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mt: 2 }}>
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        startIcon={<DeleteIcon />}
+                        onClick={() => openDeleteDialog('bill', undefined, tableOrders)}
+                      >
+                        Delete Bill
+                      </Button>
+                      {viewTab === 'unsettled' && (
+                        <Button
+                          variant="contained"
+                          color="success"
+                          startIcon={<CheckCircleIcon />}
+                          onClick={() => handleSettleBill(tableOrders)}
+                          disabled={settlingBill === tableOrders.table_number}
+                        >
+                          {settlingBill === tableOrders.table_number ? 'Settling...' : 'Settle Bill'}
                         </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                      )}
+                    </Box>
+                  </AccordionDetails>
+                </Accordion>
+              ))}
+            </Box>
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete this {deleteTarget?.type}? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={confirmDelete} color="error" variant="contained">
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

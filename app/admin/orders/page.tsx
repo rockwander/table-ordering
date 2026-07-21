@@ -16,24 +16,19 @@ import {
   TableRow,
   Paper,
   CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Select,
+  TextField,
   MenuItem,
+  Select,
   FormControl,
   InputLabel,
-  Tabs,
-  Tab,
-  Alert,
 } from '@mui/material';
-import RefreshIcon from '@mui/icons-material/Refresh';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminLayout from '@/components/AdminLayout';
 import { supabase } from '@/lib/supabase';
-import { Order, OrderItem, OrderStatus } from '@/types';
+import { Order, OrderStatus } from '@/types';
+import { useRouter } from 'next/navigation';
 
 const statusLabels: Record<OrderStatus, string> = {
   pending: 'Pending',
@@ -57,65 +52,34 @@ const statusColors: Record<OrderStatus, 'default' | 'primary' | 'secondary' | 'e
   cancelled: 'error',
 };
 
-const filterOptions: ('all' | OrderStatus)[] = [
-  'all',
-  'pending',
-  'confirmed',
-  'preparing',
-  'ready',
-  'served',
-  'bill_requested',
-  'paid',
-];
-
-interface TableOrders {
-  table_number: number;
-  orders: Order[];
-  total: number;
-  hasUnviewed: boolean;
+interface OrderWithItems extends Order {
+  order_items: Array<{
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+    special_instructions: string | null;
+  }>;
 }
 
 function OrdersContent() {
-  const [orders, setOrders] = useState<Order[]>([]);
+  const router = useRouter();
+  const [orders, setOrders] = useState<OrderWithItems[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedTable, setSelectedTable] = useState<TableOrders | null>(null);
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
-  const [newStatus, setNewStatus] = useState<OrderStatus>('pending');
-  const [updating, setUpdating] = useState(false);
-  const [settlingBill, setSettlingBill] = useState(false);
-  const [viewMode, setViewMode] = useState<'unsettled' | 'settled'>('unsettled');
-  const [error, setError] = useState('');
-  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
+  const [filterTable, setFilterTable] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [searchDate, setSearchDate] = useState<string>('');
 
   useEffect(() => {
-    // Initialize audio context
-    if (typeof window !== 'undefined') {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      setAudioContext(ctx);
-    }
-
     fetchOrders();
 
     // Subscribe to real-time order updates
-    const channel = supabase
-      .channel('admin-orders')
+    const ordersChannel = supabase
+      .channel('orders-history')
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'orders',
-        },
-        () => {
-          playBuzzer();
-          fetchOrders();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
+          event: '*',
           schema: 'public',
           table: 'orders',
         },
@@ -126,164 +90,63 @@ function OrdersContent() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(ordersChannel);
     };
   }, []);
 
-  const playBuzzer = () => {
-    if (!audioContext) return;
-
-    try {
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-
-      oscillator.frequency.value = 800;
-      oscillator.type = 'sine';
-
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.5);
-    } catch (error) {
-      console.error('Error playing buzzer:', error);
-    }
-  };
-
   const fetchOrders = async () => {
     try {
+      setLoading(true);
+
       const { data, error } = await supabase
         .from('orders')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select(`
+          *,
+          order_items (*)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(100); // Show last 100 orders
 
       if (error) throw error;
+
       setOrders(data || []);
     } catch (error) {
       console.error('Error fetching orders:', error);
-      setError('Failed to fetch orders');
     } finally {
       setLoading(false);
     }
   };
 
-  const groupOrdersByTable = (orders: Order[]): TableOrders[] => {
-    const filteredOrders = orders.filter(order =>
-      viewMode === 'unsettled' ? order.status !== 'paid' : order.status === 'paid'
-    );
+  const getFilteredOrders = () => {
+    let filtered = [...orders];
 
-    const grouped = filteredOrders.reduce((acc, order) => {
-      const tableNum = order.table_number;
-      if (!acc[tableNum]) {
-        acc[tableNum] = [];
-      }
-      acc[tableNum].push(order);
-      return acc;
-    }, {} as Record<number, Order[]>);
-
-    return Object.entries(grouped).map(([tableNum, orders]) => ({
-      table_number: parseInt(tableNum),
-      orders: orders.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
-      total: orders.reduce((sum, order) => sum + order.total, 0),
-      hasUnviewed: orders.some(order => !(order as any).viewed_by_admin),
-    })).sort((a, b) => a.table_number - b.table_number);
-  };
-
-  const handleOpenTable = (tableOrders: TableOrders) => {
-    setSelectedTable(tableOrders);
-
-    // Mark all orders as viewed
-    tableOrders.orders.forEach(async (order) => {
-      if (!(order as any).viewed_by_admin) {
-        await supabase
-          .from('orders')
-          .update({ viewed_by_admin: true })
-          .eq('id', order.id);
-      }
-    });
-  };
-
-  const handleCloseTable = () => {
-    setSelectedTable(null);
-    setSelectedOrder(null);
-    setOrderItems([]);
-  };
-
-  const handleOpenOrder = async (order: Order) => {
-    setSelectedOrder(order);
-    setNewStatus(order.status);
-
-    try {
-      const { data, error } = await supabase
-        .from('order_items')
-        .select('*')
-        .eq('order_id', order.id);
-
-      if (error) throw error;
-      setOrderItems(data || []);
-    } catch (error) {
-      console.error('Error fetching order items:', error);
+    if (filterTable !== 'all') {
+      filtered = filtered.filter(order => order.table_number === parseInt(filterTable));
     }
-  };
 
-  const handleCloseOrder = () => {
-    setSelectedOrder(null);
-    setOrderItems([]);
-  };
-
-  const handleUpdateStatus = async () => {
-    if (!selectedOrder) return;
-
-    setUpdating(true);
-    setError('');
-
-    try {
-      const { error } = await supabase
-        .from('orders')
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
-        .eq('id', selectedOrder.id);
-
-      if (error) throw error;
-
-      await fetchOrders();
-      handleCloseOrder();
-    } catch (error) {
-      console.error('Error updating order:', error);
-      setError('Failed to update order status');
-    } finally {
-      setUpdating(false);
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(order => order.status === filterStatus);
     }
-  };
 
-  const handleSettleBill = async () => {
-    if (!selectedTable) return;
+    if (searchDate) {
+      const searchDateTime = new Date(searchDate);
+      searchDateTime.setHours(0, 0, 0, 0);
+      const nextDay = new Date(searchDateTime);
+      nextDay.setDate(nextDay.getDate() + 1);
 
-    setSettlingBill(true);
-    setError('');
-
-    try {
-      const orderIds = selectedTable.orders.map(order => order.id);
-      const { error } = await supabase
-        .from('orders')
-        .update({ status: 'paid', updated_at: new Date().toISOString() })
-        .in('id', orderIds);
-
-      if (error) throw error;
-
-      await fetchOrders();
-      handleCloseTable();
-    } catch (error) {
-      console.error('Error settling bill:', error);
-      setError('Failed to settle bill');
-    } finally {
-      setSettlingBill(false);
+      filtered = filtered.filter(order => {
+        const orderDate = new Date(order.created_at);
+        return orderDate >= searchDateTime && orderDate < nextDay;
+      });
     }
+
+    return filtered;
   };
 
-  const tableGroups = groupOrdersByTable(orders);
+  const getTables = () => {
+    const tables = new Set(orders.map(order => order.table_number));
+    return Array.from(tables).sort((a, b) => a - b);
+  };
 
   if (loading) {
     return (
@@ -293,325 +156,157 @@ function OrdersContent() {
     );
   }
 
+  const filteredOrders = getFilteredOrders();
+  const tables = getTables();
+
   return (
     <Box>
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 3,
-        }}
-      >
-        <Box>
-          <Typography variant="h4" fontWeight={700} gutterBottom>
-            Orders Management
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            View orders grouped by table
-          </Typography>
-        </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
         <Button
-          variant="outlined"
-          startIcon={<RefreshIcon />}
-          onClick={fetchOrders}
+          startIcon={<ArrowBackIcon />}
+          onClick={() => router.push('/admin/dashboard')}
         >
-          Refresh
+          Back to Dashboard
         </Button>
+        <Typography variant="h4" fontWeight={700}>
+          Order History
+        </Typography>
       </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
-          {error}
-        </Alert>
-      )}
-
-      <Card>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs
-            value={viewMode}
-            onChange={(_, value) => setViewMode(value)}
-          >
-            <Tab label="Unsettled Orders" value="unsettled" />
-            <Tab label="Settled Orders" value="settled" />
-          </Tabs>
-        </Box>
-
+      {/* Filters */}
+      <Card sx={{ mb: 3 }}>
         <CardContent>
-          {tableGroups.length === 0 ? (
-            <Box sx={{ textAlign: 'center', py: 4 }}>
-              <Typography color="text.secondary">
-                {viewMode === 'unsettled' ? 'No unsettled orders' : 'No settled orders'}
-              </Typography>
-            </Box>
-          ) : (
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }, gap: 2 }}>
-              {tableGroups.map((tableGroup) => (
-                <Card
-                  key={tableGroup.table_number}
-                  variant="outlined"
-                  sx={{
-                    cursor: 'pointer',
-                    position: 'relative',
-                    '&:hover': { boxShadow: 2 },
-                    border: tableGroup.hasUnviewed ? '2px solid' : '1px solid',
-                    borderColor: tableGroup.hasUnviewed ? 'warning.main' : 'divider',
-                  }}
-                  onClick={() => handleOpenTable(tableGroup)}
-                >
-                  <CardContent>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                      <Typography variant="h5" fontWeight={700}>
-                        Table {tableGroup.table_number}
-                      </Typography>
-                      {tableGroup.hasUnviewed && (
-                        <Chip
-                          label="NEW"
-                          color="warning"
-                          size="small"
-                          sx={{ animation: 'pulse 2s infinite', '@keyframes pulse': { '0%, 100%': { opacity: 1 }, '50%': { opacity: 0.5 } } }}
-                        />
-                      )}
-                    </Box>
-                    <Typography variant="body2" color="text.secondary" gutterBottom>
-                      {tableGroup.orders.length} order{tableGroup.orders.length !== 1 ? 's' : ''}
-                    </Typography>
-                    <Typography variant="h6" color="primary" fontWeight={700}>
-                      ₹{tableGroup.total.toFixed(2)}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              ))}
-            </Box>
-          )}
+          <Typography variant="h6" fontWeight={600} gutterBottom>
+            Filters
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            <FormControl sx={{ minWidth: 200 }}>
+              <InputLabel>Table</InputLabel>
+              <Select
+                value={filterTable}
+                label="Table"
+                onChange={(e) => setFilterTable(e.target.value)}
+              >
+                <MenuItem value="all">All Tables</MenuItem>
+                {tables.map(table => (
+                  <MenuItem key={table} value={table.toString()}>
+                    Table {table}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl sx={{ minWidth: 200 }}>
+              <InputLabel>Status</InputLabel>
+              <Select
+                value={filterStatus}
+                label="Status"
+                onChange={(e) => setFilterStatus(e.target.value)}
+              >
+                <MenuItem value="all">All Statuses</MenuItem>
+                {Object.keys(statusLabels).map(status => (
+                  <MenuItem key={status} value={status}>
+                    {statusLabels[status as OrderStatus]}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <TextField
+              type="date"
+              label="Date"
+              value={searchDate}
+              onChange={(e) => setSearchDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              sx={{ minWidth: 200 }}
+            />
+
+            {(filterTable !== 'all' || filterStatus !== 'all' || searchDate) && (
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setFilterTable('all');
+                  setFilterStatus('all');
+                  setSearchDate('');
+                }}
+              >
+                Clear Filters
+              </Button>
+            )}
+          </Box>
         </CardContent>
       </Card>
 
-      {/* Table Orders Dialog */}
-      <Dialog
-        open={!!selectedTable}
-        onClose={handleCloseTable}
-        maxWidth="lg"
-        fullWidth
-      >
-        {selectedTable && (
-          <>
-            <DialogTitle>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Box>
-                  <Typography variant="h5" fontWeight={700}>
-                    Table {selectedTable.table_number}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {selectedTable.orders.length} order{selectedTable.orders.length !== 1 ? 's' : ''}
-                  </Typography>
-                </Box>
-                {viewMode === 'unsettled' && (
-                  <Button
-                    variant="contained"
-                    color="success"
-                    onClick={handleSettleBill}
-                    disabled={settlingBill}
-                  >
-                    {settlingBill ? <CircularProgress size={20} /> : `Settle Bill - ₹${selectedTable.total.toFixed(2)}`}
-                  </Button>
-                )}
-              </Box>
-            </DialogTitle>
-            <DialogContent dividers>
-              {selectedTable.orders.map((order, index) => (
-                <Card key={order.id} variant="outlined" sx={{ mb: 2 }}>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                      <Box>
-                        <Typography variant="h6" fontWeight={600}>
-                          Order #{index + 1}
+      {/* Orders Table */}
+      <Card>
+        <CardContent>
+          <Typography variant="h6" fontWeight={700} gutterBottom>
+            Orders ({filteredOrders.length})
+          </Typography>
+
+          {filteredOrders.length === 0 ? (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <Typography color="text.secondary">No orders found</Typography>
+            </Box>
+          ) : (
+            <TableContainer component={Paper} variant="outlined">
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Order ID</TableCell>
+                    <TableCell>Table</TableCell>
+                    <TableCell>Items</TableCell>
+                    <TableCell>Total</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Date & Time</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredOrders.map((order) => (
+                    <TableRow key={order.id} hover>
+                      <TableCell>
+                        <Typography variant="body2" fontFamily="monospace">
+                          #{order.id.slice(0, 8)}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {new Date(order.created_at).toLocaleString()}
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                      </TableCell>
+                      <TableCell>
+                        <Chip label={`Table ${order.table_number}`} size="small" />
+                      </TableCell>
+                      <TableCell>
+                        <Box>
+                          {order.order_items.map((item, idx) => (
+                            <Typography key={idx} variant="body2">
+                              {item.quantity}x {item.name}
+                            </Typography>
+                          ))}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Typography fontWeight={600}>₹{order.total.toFixed(2)}</Typography>
+                      </TableCell>
+                      <TableCell>
                         <Chip
                           label={statusLabels[order.status]}
                           color={statusColors[order.status]}
                           size="small"
                         />
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() => handleOpenOrder(order)}
-                        >
-                          View Details
-                        </Button>
-                      </Box>
-                    </Box>
-                    <Typography variant="h6" color="primary" fontWeight={700}>
-                      ₹{order.total.toFixed(2)}
-                    </Typography>
-                    {order.notes && (
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                        Note: {order.notes}
-                      </Typography>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-              <Card variant="outlined" sx={{ bgcolor: 'primary.light', mt: 3 }}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6" fontWeight={700}>
-                      Total Amount
-                    </Typography>
-                    <Typography variant="h5" fontWeight={700}>
-                      ₹{selectedTable.total.toFixed(2)}
-                    </Typography>
-                  </Box>
-                </CardContent>
-              </Card>
-            </DialogContent>
-            <DialogActions sx={{ px: 3, py: 2 }}>
-              <Button onClick={handleCloseTable}>Close</Button>
-            </DialogActions>
-          </>
-        )}
-      </Dialog>
-
-      {/* Order Details Dialog */}
-      <Dialog
-        open={!!selectedOrder}
-        onClose={handleCloseOrder}
-        maxWidth="md"
-        fullWidth
-      >
-        {selectedOrder && (
-          <>
-            <DialogTitle>
-              <Box>
-                <Typography variant="h6" fontWeight={700}>
-                  Order #{selectedOrder.id.slice(0, 8)}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Table {selectedOrder.table_number} •{' '}
-                  {new Date(selectedOrder.created_at).toLocaleString()}
-                </Typography>
-              </Box>
-            </DialogTitle>
-            <DialogContent dividers>
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Order Items
-                </Typography>
-                <TableContainer component={Paper} variant="outlined">
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Item</TableCell>
-                        <TableCell align="center">Qty</TableCell>
-                        <TableCell align="right">Price</TableCell>
-                        <TableCell align="right">Total</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {orderItems.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell>
-                            <Typography variant="body2" fontWeight={600}>
-                              {item.name}
-                            </Typography>
-                            {item.special_instructions && (
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                display="block"
-                              >
-                                Note: {item.special_instructions}
-                              </Typography>
-                            )}
-                          </TableCell>
-                          <TableCell align="center">{item.quantity}</TableCell>
-                          <TableCell align="right">
-                            ₹{item.price.toFixed(2)}
-                          </TableCell>
-                          <TableCell align="right">
-                            ₹{(item.price * item.quantity).toFixed(2)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Box>
-
-              {selectedOrder.notes && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Order Notes
-                  </Typography>
-                  <Paper variant="outlined" sx={{ p: 2 }}>
-                    <Typography variant="body2">{selectedOrder.notes}</Typography>
-                  </Paper>
-                </Box>
-              )}
-
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Bill Summary
-                </Typography>
-                <Paper variant="outlined" sx={{ p: 2 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2">Subtotal</Typography>
-                    <Typography variant="body2">
-                      ₹{selectedOrder.subtotal.toFixed(2)}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2">Tax</Typography>
-                    <Typography variant="body2">
-                      ₹{selectedOrder.tax.toFixed(2)}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', pt: 1, borderTop: 1, borderColor: 'divider' }}>
-                    <Typography variant="body1" fontWeight={700}>
-                      Total
-                    </Typography>
-                    <Typography variant="body1" fontWeight={700} color="primary">
-                      ₹{selectedOrder.total.toFixed(2)}
-                    </Typography>
-                  </Box>
-                </Paper>
-              </Box>
-
-              <Box>
-                <FormControl fullWidth>
-                  <InputLabel>Order Status</InputLabel>
-                  <Select
-                    value={newStatus}
-                    label="Order Status"
-                    onChange={(e) => setNewStatus(e.target.value as OrderStatus)}
-                  >
-                    {Object.entries(statusLabels).map(([value, label]) => (
-                      <MenuItem key={value} value={value}>
-                        {label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
-            </DialogContent>
-            <DialogActions sx={{ px: 3, py: 2 }}>
-              <Button onClick={handleCloseOrder}>Cancel</Button>
-              <Button
-                variant="contained"
-                onClick={handleUpdateStatus}
-                disabled={updating || newStatus === selectedOrder.status}
-              >
-                {updating ? <CircularProgress size={20} /> : 'Update Status'}
-              </Button>
-            </DialogActions>
-          </>
-        )}
-      </Dialog>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {new Date(order.created_at).toLocaleDateString()}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {new Date(order.created_at).toLocaleTimeString()}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </CardContent>
+      </Card>
     </Box>
   );
 }
