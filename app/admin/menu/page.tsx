@@ -25,18 +25,108 @@ import {
   Alert,
   Tabs,
   Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
-import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminLayout from '@/components/AdminLayout';
 import { supabase } from '@/lib/supabase';
 import { Category, MenuItem as MenuItemType } from '@/types';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+interface SortableRowProps {
+  item: MenuItemType;
+  onEdit: (item: MenuItemType) => void;
+  onDelete: (id: string) => void;
+  onToggleTopSelling: (id: string, currentStatus: boolean) => void;
+}
+
+function SortableRow({ item, onEdit, onDelete, onToggleTopSelling }: SortableRowProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <TableRow ref={setNodeRef} style={style} hover>
+      <TableCell {...attributes} {...listeners} sx={{ cursor: 'grab', width: 50 }}>
+        <DragIndicatorIcon sx={{ color: 'action.disabled' }} />
+      </TableCell>
+      <TableCell>{item.name}</TableCell>
+      <TableCell>₹{item.price.toFixed(2)}</TableCell>
+      <TableCell align="center">
+        <Chip
+          label={item.is_vegetarian ? 'Veg' : 'Non-Veg'}
+          size="small"
+          color={item.is_vegetarian ? 'success' : 'error'}
+        />
+      </TableCell>
+      <TableCell align="center">
+        <Chip
+          label={item.is_available ? 'Available' : 'Unavailable'}
+          size="small"
+          color={item.is_available ? 'success' : 'default'}
+        />
+      </TableCell>
+      <TableCell align="center">
+        <IconButton
+          size="small"
+          onClick={() => onToggleTopSelling(item.id, item.is_top_selling)}
+          sx={{ color: item.is_top_selling ? 'warning.main' : 'action.disabled' }}
+          title={item.is_top_selling ? 'Remove from top selling' : 'Mark as top selling'}
+        >
+          {item.is_top_selling ? <StarIcon fontSize="small" /> : <StarBorderIcon fontSize="small" />}
+        </IconButton>
+      </TableCell>
+      <TableCell align="right">
+        <IconButton size="small" onClick={() => onEdit(item)}>
+          <EditIcon fontSize="small" />
+        </IconButton>
+        <IconButton size="small" color="error" onClick={() => onDelete(item.id)}>
+          <DeleteIcon fontSize="small" />
+        </IconButton>
+      </TableCell>
+    </TableRow>
+  );
+}
 
 function MenuContent() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -224,29 +314,49 @@ function MenuContent() {
     }
   };
 
-  const handleMoveItem = async (itemId: string, direction: 'up' | 'down') => {
-    const currentIndex = menuItems.findIndex(item => item.id === itemId);
-    if (currentIndex === -1) return;
+  const handleDragEnd = async (event: DragEndEvent, categoryId: string) => {
+    const { active, over } = event;
 
-    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-    if (targetIndex < 0 || targetIndex >= menuItems.length) return;
+    if (!over || active.id === over.id) return;
 
-    const currentItem = menuItems[currentIndex];
-    const targetItem = menuItems[targetIndex];
+    const categoryItems = menuItems.filter(item => item.category_id === categoryId);
+    const oldIndex = categoryItems.findIndex(item => item.id === active.id);
+    const newIndex = categoryItems.findIndex(item => item.id === over.id);
 
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reorderedItems = arrayMove(categoryItems, oldIndex, newIndex);
+
+    // Update display_order for all affected items
     try {
-      // Swap display_order values
-      await Promise.all([
-        supabase
-          .from('menu_items')
-          .update({ display_order: targetItem.display_order })
-          .eq('id', currentItem.id),
-        supabase
-          .from('menu_items')
-          .update({ display_order: currentItem.display_order })
-          .eq('id', targetItem.id),
-      ]);
+      const updates = reorderedItems.map((item, index) => ({
+        id: item.id,
+        display_order: index,
+      }));
 
+      await Promise.all(
+        updates.map(update =>
+          supabase
+            .from('menu_items')
+            .update({ display_order: update.display_order })
+            .eq('id', update.id)
+        )
+      );
+
+      await fetchData();
+    } catch (error: any) {
+      setError(error.message);
+    }
+  };
+
+  const handleToggleTopSelling = async (itemId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('menu_items')
+        .update({ is_top_selling: !currentStatus })
+        .eq('id', itemId);
+
+      if (error) throw error;
       await fetchData();
     } catch (error: any) {
       setError(error.message);
@@ -337,7 +447,7 @@ function MenuContent() {
 
       {selectedTab === 1 && (
         <Box>
-          <Box sx={{ mb: 2 }}>
+          <Box sx={{ mb: 3 }}>
             <Button
               variant="contained"
               startIcon={<AddIcon />}
@@ -347,76 +457,74 @@ function MenuContent() {
             </Button>
           </Box>
 
-          <Grid container spacing={2}>
-            {menuItems.map((item, index) => (
-              <Grid item xs={12} sm={6} md={4} key={item.id}>
-                <Card>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 1 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Typography variant="h6" fontWeight={600}>
-                          {item.name}
-                        </Typography>
-                        {item.is_top_selling && (
-                          <StarIcon sx={{ color: 'warning.main', fontSize: 20 }} />
-                        )}
-                      </Box>
-                      <Box>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleMoveItem(item.id, 'up')}
-                          disabled={index === 0}
+          {categories.map((category) => {
+            const categoryItems = menuItems.filter(item => item.category_id === category.id);
+            if (categoryItems.length === 0) return null;
+
+            const sensors = useSensors(
+              useSensor(PointerSensor),
+              useSensor(KeyboardSensor, {
+                coordinateGetter: sortableKeyboardCoordinates,
+              })
+            );
+
+            return (
+              <Box key={category.id} sx={{ mb: 4 }}>
+                <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>
+                  {category.name}
+                </Typography>
+
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={(event) => handleDragEnd(event, category.id)}
+                >
+                  <TableContainer component={Paper} variant="outlined">
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ width: 50 }}></TableCell>
+                          <TableCell>Name</TableCell>
+                          <TableCell>Price</TableCell>
+                          <TableCell align="center">Type</TableCell>
+                          <TableCell align="center">Status</TableCell>
+                          <TableCell align="center">Top Selling</TableCell>
+                          <TableCell align="right">Actions</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        <SortableContext
+                          items={categoryItems.map(item => item.id)}
+                          strategy={verticalListSortingStrategy}
                         >
-                          <ArrowUpwardIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleMoveItem(item.id, 'down')}
-                          disabled={index === menuItems.length - 1}
-                        >
-                          <ArrowDownwardIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton size="small" onClick={() => handleOpenItemDialog(item)}>
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton size="small" color="error" onClick={() => handleDeleteItem(item.id)}>
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Box>
-                    </Box>
-                    {item.description && (
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                        {item.description}
-                      </Typography>
-                    )}
-                    <Typography variant="h6" color="primary" fontWeight={700} sx={{ mb: 1 }}>
-                      ₹{item.price.toFixed(2)}
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                      <Chip
-                        label={item.is_vegetarian ? 'Veg' : 'Non-Veg'}
-                        size="small"
-                        color={item.is_vegetarian ? 'success' : 'error'}
-                      />
-                      <Chip
-                        label={item.is_available ? 'Available' : 'Unavailable'}
-                        size="small"
-                        color={item.is_available ? 'success' : 'default'}
-                      />
-                      {item.is_top_selling && (
-                        <Chip
-                          label="Top Selling"
-                          size="small"
-                          color="warning"
-                          icon={<StarIcon />}
-                        />
-                      )}
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
+                          {categoryItems.map((item) => (
+                            <SortableRow
+                              key={item.id}
+                              item={item}
+                              onEdit={handleOpenItemDialog}
+                              onDelete={handleDeleteItem}
+                              onToggleTopSelling={handleToggleTopSelling}
+                            />
+                          ))}
+                        </SortableContext>
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </DndContext>
+              </Box>
+            );
+          })}
+
+          {menuItems.length === 0 && (
+            <Box sx={{ textAlign: 'center', py: 8 }}>
+              <Typography variant="h6" color="text.secondary">
+                No menu items yet
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                Create your first menu item to get started
+              </Typography>
+            </Box>
+          )}
         </Box>
       )}
 
