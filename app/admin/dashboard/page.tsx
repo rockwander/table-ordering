@@ -88,6 +88,7 @@ function DashboardContent() {
   const router = useRouter();
   const [orders, setOrders] = useState<OrderWithItems[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [buzzerNotifications, setBuzzerNotifications] = useState<BuzzerNotificationType[]>([]);
   const [currentNotification, setCurrentNotification] = useState<BuzzerNotificationType | null>(null);
   const [notificationQueue, setNotificationQueue] = useState<BuzzerNotificationType[]>([]);
@@ -111,6 +112,19 @@ function DashboardContent() {
     }
   }, [currentNotification, notificationQueue]);
 
+  // Debounced refresh to prevent multiple rapid calls
+  const refreshTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const debouncedRefresh = React.useCallback(() => {
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+    }
+    refreshTimeoutRef.current = setTimeout(() => {
+      console.log('🔄 Auto-refreshing dashboard data...');
+      setRefreshing(true);
+      fetchDashboardData();
+    }, 500); // Wait 500ms before refreshing
+  }, []);
+
   useEffect(() => {
     console.log('🚀 Dashboard mounted, setting up subscriptions...');
     fetchDashboardData();
@@ -128,7 +142,19 @@ function DashboardContent() {
         },
         (payload) => {
           console.log('📦 Order change detected:', payload.eventType, payload.new);
-          fetchDashboardData();
+          debouncedRefresh();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'order_items',
+        },
+        (payload) => {
+          console.log('📝 Order item change detected:', payload.eventType);
+          debouncedRefresh();
         }
       )
       .subscribe((status, err) => {
@@ -169,19 +195,6 @@ function DashboardContent() {
           }
         }
       )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'order_items',
-        },
-        (payload) => {
-          console.log('📦 Order item added:', payload);
-          // Refresh dashboard when new order items are added
-          fetchDashboardData();
-        }
-      )
       .subscribe((status, err) => {
         console.log('📡 Buzzer channel status:', status);
         if (err) {
@@ -200,10 +213,13 @@ function DashboardContent() {
 
     return () => {
       console.log('🧹 Cleaning up subscriptions...');
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
       supabase.removeChannel(ordersChannel);
       supabase.removeChannel(buzzerChannel);
     };
-  }, []);
+  }, [debouncedRefresh]);
 
   const fetchDashboardData = async () => {
     try {
@@ -261,6 +277,7 @@ function DashboardContent() {
       console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -559,9 +576,25 @@ function DashboardContent() {
 
         <CardContent>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h6" fontWeight={700}>
-              {viewTab === 'unsettled' ? 'Unsettled Orders' : 'Settled Bills'}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="h6" fontWeight={700}>
+                {viewTab === 'unsettled' ? 'Unsettled Orders' : 'Settled Bills'}
+              </Typography>
+              {refreshing && (
+                <Chip
+                  label="Refreshing..."
+                  size="small"
+                  color="info"
+                  sx={{
+                    animation: 'pulse 1.5s ease-in-out infinite',
+                    '@keyframes pulse': {
+                      '0%, 100%': { opacity: 1 },
+                      '50%': { opacity: 0.6 },
+                    },
+                  }}
+                />
+              )}
+            </Box>
             <Button variant="outlined" onClick={() => router.push('/admin/orders')}>
               View History
             </Button>
