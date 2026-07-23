@@ -31,6 +31,7 @@ import AdminLayout from '@/components/AdminLayout';
 import { supabase } from '@/lib/supabase';
 import { Table } from '@/types';
 import QRCode from 'qrcode';
+import { generateQRSheets, downloadAllSheets } from '@/lib/qr-sheet-generator';
 
 function TablesContent() {
   const [tables, setTables] = useState<Table[]>([]);
@@ -45,6 +46,7 @@ function TablesContent() {
   const [saving, setSaving] = useState(false);
   const [qrDialog, setQrDialog] = useState(false);
   const [selectedQR, setSelectedQR] = useState<{ table: Table; qrUrl: string } | null>(null);
+  const [generatingSheet, setGeneratingSheet] = useState(false);
 
   useEffect(() => {
     fetchTables();
@@ -181,6 +183,35 @@ function TablesContent() {
     }
   };
 
+  const handleDownloadPrintSheet = async () => {
+    try {
+      setGeneratingSheet(true);
+      const baseUrl = window.location.origin;
+
+      // Sort tables with counter first, then natural order
+      const sortedTables = [...tables]
+        .filter(t => t.is_active)
+        .sort((a, b) => {
+          if (a.table_number === 'counter') return -1;
+          if (b.table_number === 'counter') return 1;
+          const aNum = parseInt(a.table_number);
+          const bNum = parseInt(b.table_number);
+          if (!isNaN(aNum) && !isNaN(bNum)) {
+            return aNum - bNum;
+          }
+          return a.table_number.localeCompare(b.table_number);
+        });
+
+      const sheets = await generateQRSheets(sortedTables, baseUrl);
+      downloadAllSheets(sheets);
+    } catch (error) {
+      console.error('Failed to generate print sheets:', error);
+      setError('Failed to generate print sheets');
+    } finally {
+      setGeneratingSheet(false);
+    }
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
@@ -201,6 +232,15 @@ function TablesContent() {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="contained"
+            color="success"
+            startIcon={generatingSheet ? <CircularProgress size={20} color="inherit" /> : <DownloadIcon />}
+            onClick={handleDownloadPrintSheet}
+            disabled={generatingSheet || tables.filter(t => t.is_active).length === 0}
+          >
+            {generatingSheet ? 'Generating...' : 'Download Print Sheet'}
+          </Button>
           <Button
             variant="outlined"
             startIcon={<DownloadIcon />}
