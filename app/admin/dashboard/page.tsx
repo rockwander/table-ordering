@@ -43,6 +43,7 @@ import BuzzerNotification from '@/components/BuzzerNotification';
 import { supabase } from '@/lib/supabase';
 import { Order, OrderStatus, BuzzerNotification as BuzzerNotificationType } from '@/types';
 import { useRouter } from 'next/navigation';
+import { initializeNotifications, showLocalNotification, checkNotificationSupport } from '@/lib/notifications';
 
 const statusLabels: Record<OrderStatus, string> = {
   pending: 'Pending',
@@ -96,12 +97,36 @@ function DashboardContent() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'order' | 'bill'; id?: string; bill?: Bill } | null>(null);
   const [settlingBill, setSettlingBill] = useState<string | null>(null);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [stats, setStats] = useState({
     todayOrders: 0,
     todayRevenue: 0,
     monthlyOrders: 0,
     monthlyRevenue: 0,
   });
+
+  // Initialize web push notifications
+  useEffect(() => {
+    const setupNotifications = async () => {
+      console.log('📱 Setting up web push notifications...');
+      const support = checkNotificationSupport();
+      console.log('Notification support:', support);
+
+      if (support.supported && support.serviceWorkerSupported) {
+        const initialized = await initializeNotifications();
+        setNotificationsEnabled(initialized);
+        if (initialized) {
+          console.log('✅ Web push notifications enabled');
+        } else {
+          console.warn('⚠️ Web push notifications not enabled - user may need to grant permission');
+        }
+      } else {
+        console.warn('⚠️ Web push notifications not supported on this browser');
+      }
+    };
+
+    setupNotifications();
+  }, []);
 
   // Handle notification queue - show one at a time
   useEffect(() => {
@@ -184,7 +209,7 @@ function DashboardContent() {
           schema: 'public',
           table: 'buzzer_notifications',
         },
-        (payload) => {
+        async (payload) => {
           console.log('🔔 Buzzer notification received:', payload);
           const newNotification = payload.new as BuzzerNotificationType;
           if (newNotification.status === 'active') {
@@ -192,6 +217,25 @@ function DashboardContent() {
             setBuzzerNotifications((prev) => [...prev, newNotification]);
             // Add to queue instead of showing directly
             setNotificationQueue((prev) => [...prev, newNotification]);
+
+            // Show web push notification (works even when screen is off)
+            if (notificationsEnabled) {
+              const title = newNotification.notification_type === 'service_call'
+                ? '🔔 Service Request!'
+                : '🍽️ New Order!';
+              const body = `Table ${newNotification.table_number} needs assistance`;
+
+              await showLocalNotification(title, {
+                body,
+                tag: `buzzer-${newNotification.id}`,
+                data: {
+                  table_number: newNotification.table_number,
+                  notification_type: newNotification.notification_type,
+                  url: '/admin/dashboard'
+                }
+              });
+              console.log('📱 Push notification sent');
+            }
           }
         }
       )
@@ -219,7 +263,7 @@ function DashboardContent() {
       supabase.removeChannel(ordersChannel);
       supabase.removeChannel(buzzerChannel);
     };
-  }, [debouncedRefresh]);
+  }, [debouncedRefresh, notificationsEnabled]);
 
   const fetchDashboardData = async () => {
     try {
