@@ -21,6 +21,7 @@ import RemoveIcon from '@mui/icons-material/Remove';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import StarIcon from '@mui/icons-material/Star';
 import Header from '@/components/Header';
 import { supabase } from '@/lib/supabase';
 import { Category, MenuItem } from '@/types';
@@ -106,8 +107,16 @@ function MenuContent() {
 
   const filteredItems =
     selectedCategory === 'all'
-      ? menuItems
-      : menuItems.filter((item) => item.category_id === selectedCategory);
+      ? // For "All Items", show top selling items first
+        [...menuItems].sort((a, b) => {
+          // Top selling items come first
+          if (a.is_top_selling && !b.is_top_selling) return -1;
+          if (!a.is_top_selling && b.is_top_selling) return 1;
+          // If both are top selling or both are not, maintain display_order
+          return a.display_order - b.display_order;
+        })
+      : // For specific categories, use display_order as-is
+        menuItems.filter((item) => item.category_id === selectedCategory);
 
   const getItemQuantityInCart = (itemId: string) => {
     const cartItem = cartItems.find((ci) => ci.menuItem.id === itemId);
@@ -227,8 +236,27 @@ function MenuContent() {
                 display: 'flex',
                 flexDirection: 'column',
                 height: '100%',
+                border: item.is_top_selling && selectedCategory === 'all' ? 2 : 0,
+                borderColor: 'warning.main',
+                position: 'relative',
               }}
             >
+                {item.is_top_selling && selectedCategory === 'all' && (
+                  <Chip
+                    icon={<StarIcon />}
+                    label="Top Selling"
+                    size="small"
+                    color="warning"
+                    sx={{
+                      position: 'absolute',
+                      top: 8,
+                      right: 8,
+                      zIndex: 1,
+                      fontWeight: 700,
+                      boxShadow: 2,
+                    }}
+                  />
+                )}
                 {item.image_url && (
                   <CardMedia
                     component="img"

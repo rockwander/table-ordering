@@ -28,6 +28,7 @@ export type MenuItem = {
   image_url: string | null;
   is_available: boolean;
   is_vegetarian: boolean;
+  is_top_selling: boolean;
   display_order: number;
   created_at: string;
   updated_at: string;

@@ -29,6 +29,9 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import StarIcon from '@mui/icons-material/Star';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminLayout from '@/components/AdminLayout';
@@ -61,6 +64,7 @@ function MenuContent() {
     category_id: '',
     is_available: true,
     is_vegetarian: true,
+    is_top_selling: false,
     image_url: '',
     display_order: 0,
   });
@@ -162,6 +166,7 @@ function MenuContent() {
         category_id: item.category_id || '',
         is_available: item.is_available,
         is_vegetarian: item.is_vegetarian,
+        is_top_selling: item.is_top_selling,
         image_url: item.image_url || '',
         display_order: item.display_order,
       });
@@ -174,6 +179,7 @@ function MenuContent() {
         category_id: categories[0]?.id || '',
         is_available: true,
         is_vegetarian: true,
+        is_top_selling: false,
         image_url: '',
         display_order: menuItems.length,
       });
@@ -212,6 +218,35 @@ function MenuContent() {
     try {
       const { error } = await supabase.from('menu_items').delete().eq('id', id);
       if (error) throw error;
+      await fetchData();
+    } catch (error: any) {
+      setError(error.message);
+    }
+  };
+
+  const handleMoveItem = async (itemId: string, direction: 'up' | 'down') => {
+    const currentIndex = menuItems.findIndex(item => item.id === itemId);
+    if (currentIndex === -1) return;
+
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= menuItems.length) return;
+
+    const currentItem = menuItems[currentIndex];
+    const targetItem = menuItems[targetIndex];
+
+    try {
+      // Swap display_order values
+      await Promise.all([
+        supabase
+          .from('menu_items')
+          .update({ display_order: targetItem.display_order })
+          .eq('id', currentItem.id),
+        supabase
+          .from('menu_items')
+          .update({ display_order: currentItem.display_order })
+          .eq('id', targetItem.id),
+      ]);
+
       await fetchData();
     } catch (error: any) {
       setError(error.message);
@@ -313,15 +348,34 @@ function MenuContent() {
           </Box>
 
           <Grid container spacing={2}>
-            {menuItems.map((item) => (
+            {menuItems.map((item, index) => (
               <Grid item xs={12} sm={6} md={4} key={item.id}>
                 <Card>
                   <CardContent>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 1 }}>
-                      <Typography variant="h6" fontWeight={600}>
-                        {item.name}
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Typography variant="h6" fontWeight={600}>
+                          {item.name}
+                        </Typography>
+                        {item.is_top_selling && (
+                          <StarIcon sx={{ color: 'warning.main', fontSize: 20 }} />
+                        )}
+                      </Box>
                       <Box>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleMoveItem(item.id, 'up')}
+                          disabled={index === 0}
+                        >
+                          <ArrowUpwardIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleMoveItem(item.id, 'down')}
+                          disabled={index === menuItems.length - 1}
+                        >
+                          <ArrowDownwardIcon fontSize="small" />
+                        </IconButton>
                         <IconButton size="small" onClick={() => handleOpenItemDialog(item)}>
                           <EditIcon fontSize="small" />
                         </IconButton>
@@ -349,6 +403,14 @@ function MenuContent() {
                         size="small"
                         color={item.is_available ? 'success' : 'default'}
                       />
+                      {item.is_top_selling && (
+                        <Chip
+                          label="Top Selling"
+                          size="small"
+                          color="warning"
+                          icon={<StarIcon />}
+                        />
+                      )}
                     </Box>
                   </CardContent>
                 </Card>
@@ -477,6 +539,15 @@ function MenuContent() {
                 />
               }
               label="Available"
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={itemForm.is_top_selling}
+                  onChange={(e) => setItemForm({ ...itemForm, is_top_selling: e.target.checked })}
+                />
+              }
+              label="Top Selling"
             />
           </Box>
         </DialogContent>
