@@ -89,7 +89,7 @@ async function generateSingleSheet(
       width: qrSize,
       margin: 1,
       color: {
-        dark: '#D4691A',
+        dark: '#000000',
         light: '#FFFFFF',
       },
     });

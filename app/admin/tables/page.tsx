@@ -77,7 +77,7 @@ function TablesContent() {
         width: 512,
         margin: 2,
         color: {
-          dark: '#D4691A',
+          dark: '#000000',
           light: '#FFFFFF',
         },
       });
