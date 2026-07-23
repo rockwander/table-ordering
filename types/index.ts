@@ -2,7 +2,7 @@
 
 export type Table = {
   id: string;
-  table_number: number;
+  table_number: string;
   qr_code: string | null;
   is_active: boolean;
   created_at: string;
@@ -36,7 +36,7 @@ export type MenuItem = {
 export type Order = {
   id: string;
   table_id: string | null;
-  table_number: number;
+  table_number: string;
   status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'served' | 'bill_requested' | 'paid' | 'cancelled';
   subtotal: number;
   tax: number;
@@ -86,7 +86,7 @@ export type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'ser
 
 export type BuzzerNotification = {
   id: string;
-  table_number: number;
+  table_number: string;
   status: 'active' | 'dismissed';
   notification_type?: 'service_call' | 'new_order';
   created_at: string;

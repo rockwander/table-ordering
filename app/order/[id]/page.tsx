@@ -155,7 +155,7 @@ function OrderPageContent() {
   if (!order) {
     return (
       <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-        <Header tableNumber={tableNumber ? parseInt(tableNumber) : undefined} />
+        <Header tableNumber={tableNumber || undefined} />
         <Container maxWidth="md" sx={{ py: 3 }}>
           <Alert severity="error">Order not found</Alert>
         </Container>
@@ -169,7 +169,7 @@ function OrderPageContent() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: 4 }}>
-      <Header tableNumber={parseInt(tableNumber!)} showCart={false} />
+      <Header tableNumber={tableNumber!} showCart={false} />
 
       <Container maxWidth="md" sx={{ py: 3 }}>
         <Box sx={{ mb: 3 }}>

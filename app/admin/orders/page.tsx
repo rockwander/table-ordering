@@ -121,7 +121,7 @@ function OrdersContent() {
     let filtered = [...orders];
 
     if (filterTable !== 'all') {
-      filtered = filtered.filter(order => order.table_number === parseInt(filterTable));
+      filtered = filtered.filter(order => order.table_number === filterTable);
     }
 
     if (filterStatus !== 'all') {
@@ -145,7 +145,19 @@ function OrdersContent() {
 
   const getTables = () => {
     const tables = new Set(orders.map(order => order.table_number));
-    return Array.from(tables).sort((a, b) => a - b);
+    return Array.from(tables).sort((a, b) => {
+      // Sort with "counter" first, then natural sort for numbers
+      if (a === 'counter') return -1;
+      if (b === 'counter') return 1;
+      // Try to parse as numbers for numeric tables
+      const aNum = parseInt(a);
+      const bNum = parseInt(b);
+      if (!isNaN(aNum) && !isNaN(bNum)) {
+        return aNum - bNum;
+      }
+      // Fallback to string comparison
+      return a.localeCompare(b);
+    });
   };
 
   if (loading) {

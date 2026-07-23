@@ -79,7 +79,7 @@ function SettleContent() {
           *,
           order_items (*)
         `)
-        .eq('table_number', parseInt(tableNumber!))
+        .eq('table_number', tableNumber!)
         .neq('status', 'paid')
         .order('created_at', { ascending: true });
 
@@ -116,7 +116,7 @@ function SettleContent() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: 4 }}>
-      <Header tableNumber={parseInt(tableNumber)} showCart={false} />
+      <Header tableNumber={tableNumber} showCart={false} />
 
       <Container maxWidth="md" sx={{ py: 3 }}>
         <Box sx={{ mb: 3, textAlign: 'center' }}>

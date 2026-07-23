@@ -38,7 +38,7 @@ function TablesContent() {
   const [tableDialog, setTableDialog] = useState(false);
   const [editingTable, setEditingTable] = useState<Table | null>(null);
   const [tableForm, setTableForm] = useState({
-    table_number: 1,
+    table_number: '1',
     is_active: true,
   });
   const [error, setError] = useState('');
@@ -95,9 +95,13 @@ function TablesContent() {
       });
     } else {
       setEditingTable(null);
-      const nextTableNumber = tables.length > 0
-        ? Math.max(...tables.map(t => t.table_number)) + 1
-        : 1;
+      // Calculate next table number (find highest numeric table + 1)
+      const numericTables = tables
+        .map(t => parseInt(t.table_number))
+        .filter(n => !isNaN(n));
+      const nextTableNumber = numericTables.length > 0
+        ? String(Math.max(...numericTables) + 1)
+        : '1';
       setTableForm({
         table_number: nextTableNumber,
         is_active: true,
@@ -291,11 +295,12 @@ function TablesContent() {
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
             <TextField
               label="Table Number"
-              type="number"
+              type="text"
               value={tableForm.table_number}
-              onChange={(e) => setTableForm({ ...tableForm, table_number: parseInt(e.target.value) })}
+              onChange={(e) => setTableForm({ ...tableForm, table_number: e.target.value })}
               required
               fullWidth
+              helperText="Can be a number (1, 2, 3) or text (counter, VIP-A, etc.)"
             />
             <FormControlLabel
               control={

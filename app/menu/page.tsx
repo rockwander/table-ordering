@@ -85,7 +85,7 @@ function MenuContent() {
       const { data: orders, error } = await supabase
         .from('orders')
         .select('id, total')
-        .eq('table_number', parseInt(tableNumber!))
+        .eq('table_number', tableNumber!)
         .neq('status', 'paid')
         .order('created_at', { ascending: true });
 
@@ -131,7 +131,7 @@ function MenuContent() {
       const { data, error } = await supabase
         .from('buzzer_notifications')
         .insert({
-          table_number: parseInt(tableNumber),
+          table_number: tableNumber,
           status: 'active',
           notification_type: 'service_call',
         })
@@ -177,7 +177,7 @@ function MenuContent() {
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: 10 }}>
       <Header
-        tableNumber={parseInt(tableNumber)}
+        tableNumber={tableNumber}
         showCart={false}
         outstandingOrdersCount={outstandingOrdersCount}
         outstandingTotal={outstandingTotal}

@@ -9,9 +9,9 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect to admin login after a brief moment
+    // Redirect to counter menu by default
     const timer = setTimeout(() => {
-      router.push('/admin/login');
+      router.push('/menu?table=counter');
     }, 1000);
 
     return () => clearTimeout(timer);
@@ -32,7 +32,7 @@ export default function Home() {
       <Logo size="large" showText={true} />
       <CircularProgress />
       <Typography variant="body2" color="text.secondary">
-        Redirecting to admin panel...
+        Loading menu...
       </Typography>
     </Box>
   );

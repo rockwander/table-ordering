@@ -6,7 +6,7 @@ import Logo from './Logo';
 import { useRouter } from 'next/navigation';
 
 interface HeaderProps {
-  tableNumber?: number;
+  tableNumber?: string;
   showCart?: boolean;
   cartItemCount?: number;
   isAdmin?: boolean;

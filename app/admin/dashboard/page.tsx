@@ -79,7 +79,7 @@ interface OrderWithItems extends Order {
 
 interface Bill {
   bill_id: string;
-  table_number: number;
+  table_number: string;
   orders: OrderWithItems[];
   total: number;
   settled_at?: string;
@@ -384,14 +384,26 @@ function DashboardContent() {
         }
         acc[tableNum].push(order);
         return acc;
-      }, {} as Record<number, OrderWithItems[]>);
+      }, {} as Record<string, OrderWithItems[]>);
 
       return Object.entries(grouped).map(([tableNum, orders]) => ({
         bill_id: `table-${tableNum}-active`,
-        table_number: parseInt(tableNum),
+        table_number: tableNum,
         orders: orders.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
         total: orders.reduce((sum, order) => sum + order.total, 0),
-      })).sort((a, b) => a.table_number - b.table_number);
+      })).sort((a, b) => {
+        // Sort with "counter" first, then natural sort for numbers
+        if (a.table_number === 'counter') return -1;
+        if (b.table_number === 'counter') return 1;
+        // Try to parse as numbers for numeric tables
+        const aNum = parseInt(a.table_number);
+        const bNum = parseInt(b.table_number);
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+          return aNum - bNum;
+        }
+        // Fallback to string comparison
+        return a.table_number.localeCompare(b.table_number);
+      });
     } else {
       // For settled: group by table + settlement time (orders settled together = one bill)
       const grouped = filteredOrders.reduce((acc, order) => {
@@ -408,7 +420,7 @@ function DashboardContent() {
         }
         acc[billKey].orders.push(order);
         return acc;
-      }, {} as Record<string, { table_number: number; orders: OrderWithItems[]; settled_at: string }>);
+      }, {} as Record<string, { table_number: string; orders: OrderWithItems[]; settled_at: string }>);
 
       return Object.entries(grouped).map(([billKey, data]) => ({
         bill_id: billKey,

@@ -92,7 +92,7 @@ function CartContent() {
           *,
           order_items (*)
         `)
-        .eq('table_number', parseInt(tableNumber!))
+        .eq('table_number', tableNumber!)
         .neq('status', 'paid')
         .order('created_at', { ascending: true });
 
@@ -131,7 +131,7 @@ function CartContent() {
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
-          table_number: parseInt(tableNumber!),
+          table_number: tableNumber!,
           status: 'pending',
           subtotal: newCartSubtotal,
           tax: newCartTax,
@@ -163,7 +163,7 @@ function CartContent() {
       const { error: buzzerError } = await supabase
         .from('buzzer_notifications')
         .insert({
-          table_number: parseInt(tableNumber!),
+          table_number: tableNumber!,
           status: 'active',
           notification_type: 'new_order',
         });
@@ -197,7 +197,7 @@ function CartContent() {
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: 4 }}>
       <Header
-        tableNumber={parseInt(tableNumber)}
+        tableNumber={tableNumber}
         showCart={false}
         outstandingOrdersCount={outstandingOrdersCount}
         outstandingTotal={outstandingOrdersTotal}

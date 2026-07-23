@@ -57,7 +57,7 @@ const notificationConfigs: Record<NotificationType, NotificationConfig> = {
 };
 
 interface BuzzerNotificationProps {
-  tableNumber: number;
+  tableNumber: string;
   notificationType: NotificationType;
   audioContext?: AudioContext | null;
   onDismiss: () => void;
