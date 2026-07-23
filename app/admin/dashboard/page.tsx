@@ -114,6 +114,7 @@ function DashboardContent() {
   useEffect(() => {
     console.log('🚀 Dashboard mounted, setting up subscriptions...');
     fetchDashboardData();
+    fetchActiveBuzzerNotifications();
 
     // Subscribe to real-time order updates
     const ordersChannel = supabase
@@ -260,6 +261,30 @@ function DashboardContent() {
       console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchActiveBuzzerNotifications = async () => {
+    try {
+      console.log('🔍 Fetching active buzzer notifications...');
+      const { data, error } = await supabase
+        .from('buzzer_notifications')
+        .select('*')
+        .eq('status', 'active')
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        console.log(`✅ Found ${data.length} active buzzer notifications`);
+        setBuzzerNotifications(data);
+        // Add all to queue - they'll be shown one at a time
+        setNotificationQueue(data);
+      } else {
+        console.log('📭 No active buzzer notifications');
+      }
+    } catch (error) {
+      console.error('❌ Error fetching active buzzer notifications:', error);
     }
   };
 

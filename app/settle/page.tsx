@@ -17,6 +17,8 @@ import {
   Alert,
 } from '@mui/material';
 import ReceiptIcon from '@mui/icons-material/Receipt';
+import StarIcon from '@mui/icons-material/Star';
+import RateReviewIcon from '@mui/icons-material/RateReview';
 import Header from '@/components/Header';
 import { supabase } from '@/lib/supabase';
 import { RestaurantSettings } from '@/types';
@@ -229,6 +231,45 @@ function SettleContent() {
                 </Typography>
                 <Typography variant="body1" textAlign="center">
                   Please pay the total bill amount of <strong>₹{grandTotal.toFixed(2)}</strong> at the counter
+                </Typography>
+              </CardContent>
+            </Card>
+
+            {/* Google Review Card */}
+            <Card
+              component="a"
+              href="https://g.page/r/CdvZ90aTouPzEBM/review"
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{
+                mb: 2,
+                bgcolor: 'warning.light',
+                textDecoration: 'none',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'scale(1.02)',
+                  boxShadow: 4,
+                },
+              }}
+            >
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 1 }}>
+                  <RateReviewIcon sx={{ fontSize: 32, color: 'warning.dark' }} />
+                  <Typography variant="h6" fontWeight={700} color="warning.dark">
+                    Liked the food?
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1 }}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <StarIcon key={star} sx={{ fontSize: 28, color: '#FFD700' }} />
+                  ))}
+                </Box>
+                <Typography variant="body1" textAlign="center" fontWeight={600} color="text.primary">
+                  Please rate us on Google!
+                </Typography>
+                <Typography variant="body2" textAlign="center" color="text.secondary" sx={{ mt: 0.5 }}>
+                  Tap here to leave a review
                 </Typography>
               </CardContent>
             </Card>
