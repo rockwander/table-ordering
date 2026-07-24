@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   webDir: 'public',
   server: {
     // Load from your live Vercel URL - this enables auto-updates!
-    url: 'https://table-ordering-gamma.vercel.app',
+    url: 'https://table-ordering-gamma.vercel.app/admin/dashboard',
     cleartext: false
   },
   android: {
