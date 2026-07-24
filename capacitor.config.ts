@@ -3,12 +3,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'com.ramanis.cafe',
   appName: "Ramani's Cafe Admin",
-  webDir: 'public',
-  server: {
-    // Load from your live Vercel URL - this enables auto-updates!
-    url: 'https://table-ordering-gamma.vercel.app/admin/dashboard',
-    cleartext: false
-  },
+  webDir: 'out',
   android: {
     allowMixedContent: false,
     captureInput: true,
