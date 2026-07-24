@@ -40,9 +40,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# supabase (keep functions)
-/supabase/*
-!/supabase/functions
+# supabase (Edge Functions deployed separately, don't include in Next.js build)
+/supabase
 
 # Firebase credentials
 firebase-admin-key.json
