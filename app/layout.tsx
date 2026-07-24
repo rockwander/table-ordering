@@ -4,6 +4,7 @@ import "./globals.css";
 import ThemeProvider from "@/components/ThemeProvider";
 import EmotionRegistry from "@/components/EmotionRegistry";
 import { CartProvider } from "@/contexts/CartContext";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 
 const breeSerif = Bree_Serif({
   weight: '400',
@@ -32,7 +33,9 @@ export default function RootLayout({
       <body>
         <EmotionRegistry>
           <ThemeProvider>
-            <CartProvider>{children}</CartProvider>
+            <LanguageProvider>
+              <CartProvider>{children}</CartProvider>
+            </LanguageProvider>
           </ThemeProvider>
         </EmotionRegistry>
       </body>

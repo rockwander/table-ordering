@@ -3,10 +3,12 @@
 import { useEffect, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
-import { Box, Alert, AlertTitle, Collapse, IconButton } from '@mui/material';
+import { Box, Alert, AlertTitle, Collapse, IconButton, Button, Stack } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import TranslateIcon from '@mui/icons-material/Translate';
 import AdminDashboard from '@/app/admin/dashboard/page';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 function FCMDebugBanner() {
   const [logs, setLogs] = useState<string[]>([]);
@@ -121,8 +123,29 @@ function FCMDebugBanner() {
 }
 
 export default function MobileDashboard() {
+  const { language, setLanguage, t } = useLanguage();
+
   return (
     <>
+      <Box sx={{ position: 'sticky', top: 0, zIndex: 1001, bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider', p: 1 }}>
+        <Stack direction="row" spacing={1} justifyContent="center">
+          <Button
+            size="small"
+            variant={language === 'en' ? 'contained' : 'outlined'}
+            onClick={() => setLanguage('en')}
+          >
+            English
+          </Button>
+          <Button
+            size="small"
+            variant={language === 'gu' ? 'contained' : 'outlined'}
+            onClick={() => setLanguage('gu')}
+            startIcon={<TranslateIcon />}
+          >
+            ગુજરાતી
+          </Button>
+        </Stack>
+      </Box>
       <FCMDebugBanner />
       <AdminDashboard />
     </>
