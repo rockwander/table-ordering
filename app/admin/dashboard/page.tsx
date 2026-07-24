@@ -271,32 +271,36 @@ function DashboardContent() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      // Fetch today's orders with items
-      const { data: todayOrdersData, error: todayOrdersError } = await supabase
+      // Fetch ALL orders with items
+      const { data: allOrdersData, error: allOrdersError } = await supabase
         .from('orders')
         .select(`
           *,
           order_items (*)
         `)
-        .gte('created_at', today.toISOString())
         .order('created_at', { ascending: false });
 
-      if (todayOrdersError) throw todayOrdersError;
+      if (allOrdersError) throw allOrdersError;
 
-      const todayOrders: OrderWithItems[] = todayOrdersData || [];
-      setOrders(todayOrders);
+      const allOrders: OrderWithItems[] = allOrdersData || [];
+      setOrders(allOrders);
 
-      // Calculate stats
+      // Calculate stats for today's orders only
+      const todayOrders = allOrders.filter(order =>
+        new Date(order.created_at) >= today
+      );
+
       const todayOrdersCount = todayOrders.length || 0;
       const todayRevenue =
         todayOrders
           .filter((o) => o.status === 'paid')
           .reduce((sum, o) => sum + o.total, 0) || 0;
 
-      const pendingOrders = todayOrders.filter((o) => o.status !== 'paid');
-      const pendingOrdersCount = pendingOrders.length || 0;
+      // Pending orders from ALL time
+      const allPendingOrders = allOrders.filter((o) => o.status !== 'paid');
+      const pendingOrdersCount = allPendingOrders.length || 0;
       const pendingTotal =
-        pendingOrders.reduce((sum, o) => sum + o.total, 0) || 0;
+        allPendingOrders.reduce((sum, o) => sum + o.total, 0) || 0;
 
       setStats({
         todayOrders: todayOrdersCount,
@@ -358,12 +362,21 @@ function DashboardContent() {
   };
 
   const groupOrdersIntoBills = (): Bill[] => {
-    const filteredOrders = orders.filter(order =>
+    let filteredOrders = orders.filter(order =>
       viewTab === 'unsettled' ? order.status !== 'paid' : order.status === 'paid'
     );
 
+    // For settled bills, only show today's settled bills
+    if (viewTab === 'settled') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      filteredOrders = filteredOrders.filter(order =>
+        new Date(order.updated_at) >= today
+      );
+    }
+
     if (viewTab === 'unsettled') {
-      // For unsettled: group by table (one active bill per table)
+      // For unsettled: show ALL pending orders (group by table)
       const grouped = filteredOrders.reduce((acc, order) => {
         const tableNum = order.table_number;
         if (!acc[tableNum]) {
@@ -672,16 +685,19 @@ function DashboardContent() {
       <Card>
         <CardContent sx={{ pb: 0 }}>
           <Typography variant="h5" fontWeight={700} gutterBottom>
-            Today's Orders
+            Orders Management
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            {viewTab === 'unsettled'
+              ? 'All pending bills • Settle bills when customers are ready to pay'
+              : `Today's settled bills • ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`
+            }
           </Typography>
         </CardContent>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs value={viewTab} onChange={(e, newValue) => setViewTab(newValue)}>
             <Tab label="Pending Bills" value="unsettled" />
-            <Tab label="Settled Bills" value="settled" />
+            <Tab label="Settled Bills (Today)" value="settled" />
           </Tabs>
         </Box>
 
