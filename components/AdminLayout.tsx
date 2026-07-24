@@ -25,8 +25,10 @@ import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import QrCode2Icon from '@mui/icons-material/QrCode2';
+import TranslateIcon from '@mui/icons-material/Translate';
 import Logo from './Logo';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const drawerWidth = 260;
 
@@ -45,6 +47,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const pathname = usePathname();
   const { signOut } = useAuth();
+  const { language, setLanguage } = useLanguage();
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -147,6 +150,34 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <MenuIcon />
           </IconButton>
           <Logo size="small" showText={true} />
+          <Box sx={{ flexGrow: 1 }} />
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              size="small"
+              variant={language === 'en' ? 'contained' : 'outlined'}
+              onClick={() => setLanguage('en')}
+              sx={{
+                minWidth: { xs: 'auto', sm: 80 },
+                px: { xs: 1, sm: 2 },
+                fontWeight: 600,
+              }}
+            >
+              English
+            </Button>
+            <Button
+              size="small"
+              variant={language === 'gu' ? 'contained' : 'outlined'}
+              onClick={() => setLanguage('gu')}
+              startIcon={<TranslateIcon />}
+              sx={{
+                minWidth: { xs: 'auto', sm: 100 },
+                px: { xs: 1, sm: 2 },
+                fontWeight: 600,
+              }}
+            >
+              ગુજરાતી
+            </Button>
+          </Box>
         </Toolbar>
       </AppBar>
 
