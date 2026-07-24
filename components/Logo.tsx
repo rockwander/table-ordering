@@ -41,7 +41,8 @@ export default function Logo({ size = 'medium', showText = true }: LogoProps) {
           variant="h6"
           sx={{
             fontSize: sizeMap[size].text,
-            fontWeight: 700,
+            fontWeight: 400,
+            fontFamily: 'var(--font-bree-serif)',
             color: 'primary.main',
             letterSpacing: '-0.02em',
           }}

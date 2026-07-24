@@ -1,8 +1,15 @@
 import type { Metadata } from "next";
+import { Bree_Serif } from "next/font/google";
 import "./globals.css";
 import ThemeProvider from "@/components/ThemeProvider";
 import EmotionRegistry from "@/components/EmotionRegistry";
 import { CartProvider } from "@/contexts/CartContext";
+
+const breeSerif = Bree_Serif({
+  weight: '400',
+  subsets: ['latin'],
+  variable: '--font-bree-serif',
+});
 
 export const metadata: Metadata = {
   title: "Ramani's Cafe",
@@ -21,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={breeSerif.variable}>
       <body>
         <EmotionRegistry>
           <ThemeProvider>
