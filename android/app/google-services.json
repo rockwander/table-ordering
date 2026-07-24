@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1044076059313",
+    "project_id": "table-ordering-app-74046",
+    "storage_bucket": "table-ordering-app-74046.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1044076059313:android:8ba2e6aad2c4af7a6bfb5e",
+        "android_client_info": {
+          "package_name": "com.ramanis.cafe"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAf7C09Eu3n5QPXRdiP09sZu-m-ssKwwXo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

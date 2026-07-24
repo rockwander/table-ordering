@@ -40,5 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# supabase
-/supabase
+# supabase (keep functions)
+/supabase/*
+!/supabase/functions
+
+# Firebase credentials
+firebase-admin-key.json

@@ -45,6 +45,7 @@ import { supabase } from '@/lib/supabase';
 import { Order, OrderStatus, BuzzerNotification as BuzzerNotificationType } from '@/types';
 import { useRouter } from 'next/navigation';
 import { initializeNotifications, showLocalNotification, checkNotificationSupport } from '@/lib/notifications';
+import { initializePushNotifications } from '@/lib/fcm-notifications';
 
 const statusLabels: Record<OrderStatus, string> = {
   pending: 'Pending',
@@ -106,10 +107,21 @@ function DashboardContent() {
     pendingTotal: 0,
   });
 
-  // Initialize web push notifications
+  // Initialize web push notifications and FCM (for mobile)
   useEffect(() => {
     const setupNotifications = async () => {
-      console.log('📱 Setting up web push notifications...');
+      console.log('📱 Setting up notifications...');
+
+      // Initialize FCM for mobile (native app)
+      try {
+        await initializePushNotifications();
+        console.log('✅ FCM push notifications initialized');
+        setNotificationsEnabled(true);
+      } catch (error) {
+        console.log('ℹ️ FCM not available (not on native platform)');
+      }
+
+      // Initialize web push notifications (for web)
       const support = checkNotificationSupport();
       console.log('Notification support:', support);
 
