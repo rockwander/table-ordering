@@ -21,8 +21,15 @@ import {
   Select,
   FormControl,
   InputLabel,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogContentText,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminLayout from '@/components/AdminLayout';
@@ -69,6 +76,9 @@ function OrdersContent() {
   const [filterTable, setFilterTable] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchDate, setSearchDate] = useState<string>('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState<OrderWithItems | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchOrders();
@@ -158,6 +168,51 @@ function OrdersContent() {
       // Fallback to string comparison
       return a.localeCompare(b);
     });
+  };
+
+  const handleDeleteClick = (order: OrderWithItems) => {
+    setOrderToDelete(order);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!orderToDelete) return;
+
+    setDeleting(true);
+    try {
+      // Delete order_items first
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .delete()
+        .eq('order_id', orderToDelete.id);
+
+      if (itemsError) throw itemsError;
+
+      // Then delete the order
+      const { error: orderError } = await supabase
+        .from('orders')
+        .delete()
+        .eq('id', orderToDelete.id);
+
+      if (orderError) throw orderError;
+
+      // Update local state
+      setOrders(orders.filter(order => order.id !== orderToDelete.id));
+
+      // Close dialog
+      setDeleteDialogOpen(false);
+      setOrderToDelete(null);
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      alert('Failed to delete order. Please try again.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setOrderToDelete(null);
   };
 
   if (loading) {
@@ -271,6 +326,7 @@ function OrdersContent() {
                     <TableCell>Total</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Date & Time</TableCell>
+                    <TableCell align="center">Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -311,6 +367,16 @@ function OrdersContent() {
                           {new Date(order.created_at).toLocaleTimeString()}
                         </Typography>
                       </TableCell>
+                      <TableCell align="center">
+                        <IconButton
+                          color="error"
+                          onClick={() => handleDeleteClick(order)}
+                          size="small"
+                          title="Delete order"
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -319,6 +385,53 @@ function OrdersContent() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleDeleteCancel}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Delete Order</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete this order?
+            {orderToDelete && (
+              <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
+                <Typography variant="body2" fontWeight={600}>
+                  Order #{orderToDelete.id.slice(0, 8)}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Table {orderToDelete.table_number}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Total: ₹{orderToDelete.total.toFixed(2)}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  {orderToDelete.order_items.length} item(s)
+                </Typography>
+              </Box>
+            )}
+            <Typography variant="body2" color="error" sx={{ mt: 2, fontWeight: 600 }}>
+              This action cannot be undone.
+            </Typography>
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteCancel} disabled={deleting}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDeleteConfirm}
+            color="error"
+            variant="contained"
+            disabled={deleting}
+          >
+            {deleting ? 'Deleting...' : 'Delete Order'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
