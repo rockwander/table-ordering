@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "1044076059313",
+    "project_number": "73996914963",
     "project_id": "table-ordering-app-74046",
     "storage_bucket": "table-ordering-app-74046.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1044076059313:android:8ba2e6aad2c4af7a6bfb5e",
+        "mobilesdk_app_id": "1:73996914963:android:b894bf2b7ea31c57f84ae6",
         "android_client_info": {
           "package_name": "com.ramanis.cafe"
         }
