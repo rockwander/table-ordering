@@ -13,80 +13,6 @@ interface NotificationPayload {
   };
 }
 
-// Get Firebase access token using service account
-async function getAccessToken() {
-  const serviceAccount = JSON.parse(Deno.env.get("FIREBASE_SERVICE_ACCOUNT") || "{}");
-
-  const jwtHeader = btoa(JSON.stringify({
-    alg: "RS256",
-    typ: "JWT",
-  }));
-
-  const now = Math.floor(Date.now() / 1000);
-  const jwtClaimSet = btoa(JSON.stringify({
-    iss: serviceAccount.client_email,
-    scope: "https://www.googleapis.com/auth/firebase.messaging",
-    aud: "https://oauth2.googleapis.com/token",
-    exp: now + 3600,
-    iat: now,
-  }));
-
-  // Note: This is a simplified version. In production, you'd use a proper JWT library
-  // that can sign with RS256 using the private key from the service account.
-  // For Deno Edge Functions, you might want to use a library like djwt or jose
-
-  const encoder = new TextEncoder();
-  const data = encoder.encode(`${jwtHeader}.${jwtClaimSet}`);
-
-  // Import the private key
-  const privateKey = serviceAccount.private_key;
-  const pemContents = privateKey
-    .replace("-----BEGIN PRIVATE KEY-----", "")
-    .replace("-----END PRIVATE KEY-----", "")
-    .replace(/\n/g, "");
-
-  const binaryKey = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
-
-  const cryptoKey = await crypto.subtle.importKey(
-    "pkcs8",
-    binaryKey,
-    {
-      name: "RSASSA-PKCS1-v1_5",
-      hash: "SHA-256",
-    },
-    false,
-    ["sign"]
-  );
-
-  const signature = await crypto.subtle.sign(
-    "RSASSA-PKCS1-v1_5",
-    cryptoKey,
-    data
-  );
-
-  const base64Signature = btoa(String.fromCharCode(...new Uint8Array(signature)))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=/g, "");
-
-  const jwt = `${jwtHeader}.${jwtClaimSet}.${base64Signature}`;
-
-  // Exchange JWT for access token
-  const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      assertion: jwt,
-    }),
-  });
-
-  const tokenData = await tokenResponse.json();
-  return tokenData.access_token;
-}
-
 // Send FCM notification to all registered devices
 async function sendNotification(payload: NotificationPayload) {
   // Get all FCM tokens from database
@@ -108,8 +34,76 @@ async function sendNotification(payload: NotificationPayload) {
     return { success: true, message: "No devices to notify" };
   }
 
-  // Get Firebase access token
-  const accessToken = await getAccessToken();
+  // Get Firebase service account
+  const serviceAccount = JSON.parse(Deno.env.get("FIREBASE_SERVICE_ACCOUNT") || "{}");
+
+  // Get access token using service account
+  const jwtHeader = {
+    alg: "RS256",
+    typ: "JWT",
+  };
+
+  const now = Math.floor(Date.now() / 1000);
+  const jwtClaimSet = {
+    iss: serviceAccount.client_email,
+    scope: "https://www.googleapis.com/auth/firebase.messaging",
+    aud: "https://oauth2.googleapis.com/token",
+    exp: now + 3600,
+    iat: now,
+  };
+
+  const encoder = new TextEncoder();
+  const headerB64 = btoa(JSON.stringify(jwtHeader)).replace(/=/g, "");
+  const claimSetB64 = btoa(JSON.stringify(jwtClaimSet)).replace(/=/g, "");
+  const unsignedToken = `${headerB64}.${claimSetB64}`;
+
+  // Import private key
+  const privateKeyPem = serviceAccount.private_key;
+  const pemContents = privateKeyPem
+    .replace("-----BEGIN PRIVATE KEY-----", "")
+    .replace("-----END PRIVATE KEY-----", "")
+    .replace(/\n/g, "");
+
+  const binaryKey = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
+
+  const cryptoKey = await crypto.subtle.importKey(
+    "pkcs8",
+    binaryKey,
+    {
+      name: "RSASSA-PKCS1-v1_5",
+      hash: "SHA-256",
+    },
+    false,
+    ["sign"]
+  );
+
+  const signature = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    cryptoKey,
+    encoder.encode(unsignedToken)
+  );
+
+  const base64Signature = btoa(String.fromCharCode(...new Uint8Array(signature)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=/g, "");
+
+  const jwt = `${unsignedToken}.${base64Signature}`;
+
+  // Exchange JWT for access token
+  const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion: jwt,
+    }),
+  });
+
+  const tokenData = await tokenResponse.json();
+  const accessToken = tokenData.access_token;
 
   // Send notification to each token
   const results = await Promise.all(
@@ -134,9 +128,10 @@ async function sendNotification(payload: NotificationPayload) {
                 android: {
                   priority: "high",
                   notification: {
-                    sound: "notification.wav",
+                    sound: "default",
                     channel_id: "orders",
-                    priority: "high",
+                    default_sound: false,
+                    default_vibrate_timings: false,
                   },
                 },
               },

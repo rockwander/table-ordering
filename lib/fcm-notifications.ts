@@ -20,13 +20,13 @@ export const initializePushNotifications = async () => {
   }
 
   try {
-    // Create notification channel for Android
+    // Create notification channel for Android with loud sound
     await LocalNotifications.createChannel({
       id: 'orders',
       name: 'Order Notifications',
       description: 'Notifications for new orders and waiter calls',
-      sound: 'notification.wav',
-      importance: 5, // High importance
+      sound: 'alarm.wav', // Use a louder alarm-style sound
+      importance: 5, // Max importance - shows as heads-up notification
       visibility: 1, // Public
       lights: true,
       lightColor: '#FF0000',
