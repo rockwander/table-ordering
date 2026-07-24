@@ -32,6 +32,7 @@ import {
   TableHead,
   TableRow,
   Paper,
+  Avatar,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -39,6 +40,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
+import ImageIcon from '@mui/icons-material/Image';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminLayout from '@/components/AdminLayout';
@@ -67,9 +69,10 @@ interface SortableRowProps {
   onEdit: (item: MenuItemType) => void;
   onDelete: (id: string) => void;
   onToggleTopSelling: (id: string, currentStatus: boolean) => void;
+  onImageClick: (item: MenuItemType) => void;
 }
 
-function SortableRow({ item, onEdit, onDelete, onToggleTopSelling }: SortableRowProps) {
+function SortableRow({ item, onEdit, onDelete, onToggleTopSelling, onImageClick }: SortableRowProps) {
   const {
     attributes,
     listeners,
@@ -90,7 +93,18 @@ function SortableRow({ item, onEdit, onDelete, onToggleTopSelling }: SortableRow
       <TableCell {...attributes} {...listeners} sx={{ cursor: 'grab', width: 50 }}>
         <DragIndicatorIcon sx={{ color: 'action.disabled' }} />
       </TableCell>
-      <TableCell>{item.name}</TableCell>
+      <TableCell>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Avatar
+            src={item.image_url || ''}
+            variant="rounded"
+            sx={{ width: 40, height: 40, bgcolor: 'grey.300' }}
+          >
+            <ImageIcon />
+          </Avatar>
+          <Typography>{item.name}</Typography>
+        </Box>
+      </TableCell>
       <TableCell>₹{item.price.toFixed(2)}</TableCell>
       <TableCell align="center">
         <Chip
@@ -117,6 +131,9 @@ function SortableRow({ item, onEdit, onDelete, onToggleTopSelling }: SortableRow
         </IconButton>
       </TableCell>
       <TableCell align="right">
+        <IconButton size="small" onClick={() => onImageClick(item)} title="Add/Change Image">
+          <ImageIcon fontSize="small" />
+        </IconButton>
         <IconButton size="small" onClick={() => onEdit(item)}>
           <EditIcon fontSize="small" />
         </IconButton>
@@ -169,6 +186,11 @@ function MenuContent() {
 
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Image Dialog State
+  const [imageDialog, setImageDialog] = useState(false);
+  const [editingImage, setEditingImage] = useState<MenuItemType | null>(null);
+  const [imageUrl, setImageUrl] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -371,6 +393,34 @@ function MenuContent() {
     }
   };
 
+  const handleOpenImageDialog = (item: MenuItemType) => {
+    setEditingImage(item);
+    setImageUrl(item.image_url || '');
+    setImageDialog(true);
+  };
+
+  const handleSaveImage = async () => {
+    if (!editingImage) return;
+
+    setSaving(true);
+    setError('');
+
+    try {
+      const { error } = await supabase
+        .from('menu_items')
+        .update({ image_url: imageUrl || null })
+        .eq('id', editingImage.id);
+
+      if (error) throw error;
+      await fetchData();
+      setImageDialog(false);
+    } catch (error: any) {
+      setError(error.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
@@ -505,6 +555,7 @@ function MenuContent() {
                               onEdit={handleOpenItemDialog}
                               onDelete={handleDeleteItem}
                               onToggleTopSelling={handleToggleTopSelling}
+                              onImageClick={handleOpenImageDialog}
                             />
                           ))}
                         </SortableContext>
@@ -663,6 +714,54 @@ function MenuContent() {
         <DialogActions>
           <Button onClick={() => setItemDialog(false)}>Cancel</Button>
           <Button variant="contained" onClick={handleSaveItem} disabled={saving}>
+            {saving ? <CircularProgress size={20} /> : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Image Dialog */}
+      <Dialog open={imageDialog} onClose={() => setImageDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Add/Change Image for {editingImage?.name}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+            <TextField
+              label="Image URL"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+              fullWidth
+              helperText="Enter a valid image URL (e.g., https://example.com/image.jpg)"
+              placeholder="https://example.com/image.jpg"
+            />
+            {imageUrl && (
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  Preview:
+                </Typography>
+                <Box
+                  component="img"
+                  src={imageUrl}
+                  alt="Preview"
+                  sx={{
+                    maxWidth: '100%',
+                    maxHeight: 200,
+                    borderRadius: 1,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                  }}
+                  onError={(e: any) => {
+                    e.target.style.display = 'none';
+                  }}
+                  onLoad={(e: any) => {
+                    e.target.style.display = 'block';
+                  }}
+                />
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setImageDialog(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleSaveImage} disabled={saving}>
             {saving ? <CircularProgress size={20} /> : 'Save'}
           </Button>
         </DialogActions>
