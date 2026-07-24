@@ -21,7 +21,6 @@ import RemoveIcon from '@mui/icons-material/Remove';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
-import StarIcon from '@mui/icons-material/Star';
 import Header from '@/components/Header';
 import { supabase } from '@/lib/supabase';
 import { Category, MenuItem } from '@/types';
@@ -117,6 +116,14 @@ function MenuContent() {
         })
       : // For specific categories, use display_order as-is
         menuItems.filter((item) => item.category_id === selectedCategory);
+
+  // Separate top selling items for "All Items" view
+  const topSellingItems = selectedCategory === 'all'
+    ? filteredItems.filter(item => item.is_top_selling)
+    : [];
+  const regularItems = selectedCategory === 'all'
+    ? filteredItems.filter(item => !item.is_top_selling)
+    : filteredItems;
 
   const getItemQuantityInCart = (itemId: string) => {
     const cartItem = cartItems.find((ci) => ci.menuItem.id === itemId);
@@ -218,45 +225,182 @@ function MenuContent() {
         </Box>
 
         {/* Menu Items Grid */}
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: {
-              xs: '1fr',
-              sm: 'repeat(2, 1fr)',
-              md: 'repeat(3, 1fr)',
-            },
-            gap: 3,
-          }}
-        >
-          {filteredItems.map((item) => (
-            <Card
-              key={item.id}
+        <Box>
+          {/* Top Selling Items Group */}
+          {topSellingItems.length > 0 && (
+            <Box
               sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                height: '100%',
-                border: item.is_top_selling && selectedCategory === 'all' ? 2 : 0,
-                borderColor: 'warning.main',
-                position: 'relative',
+                mb: 4,
+                p: 2,
+                background: 'linear-gradient(white, white) padding-box, linear-gradient(135deg, #FFD700, #FFA500, #FF6B6B, #FF1493) border-box',
+                border: '3px solid transparent',
+                borderRadius: 2,
               }}
             >
-                {item.is_top_selling && selectedCategory === 'all' && (
-                  <Chip
-                    icon={<StarIcon />}
-                    label="Top Selling"
-                    size="small"
-                    color="warning"
+              <Typography variant="h5" fontWeight={700} sx={{ mb: 2, color: 'text.primary' }}>
+                Top Selling
+              </Typography>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: {
+                    xs: '1fr',
+                    sm: 'repeat(2, 1fr)',
+                    md: 'repeat(3, 1fr)',
+                  },
+                  gap: 3,
+                }}
+              >
+                {topSellingItems.map((item) => (
+                  <Card
+                    key={item.id}
                     sx={{
-                      position: 'absolute',
-                      top: 8,
-                      right: 8,
-                      zIndex: 1,
-                      fontWeight: 700,
-                      boxShadow: 2,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      height: '100%',
                     }}
+                  >
+                    {item.image_url && (
+                  <CardMedia
+                    component="img"
+                    height="180"
+                    image={item.image_url}
+                    alt={item.name}
+                    sx={{ objectFit: 'cover' }}
                   />
                 )}
+                <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'start', gap: 1, mb: 1, minWidth: 0 }}>
+                    <Typography
+                      variant="h6"
+                      component="div"
+                      sx={{
+                        flexGrow: 1,
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        lineHeight: 1.3,
+                        minWidth: 0,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        wordBreak: 'break-word',
+                      }}
+                    >
+                      {item.name}
+                    </Typography>
+                    {item.is_vegetarian && (
+                      <Chip
+                        icon={<CheckCircleIcon />}
+                        label="Veg"
+                        size="small"
+                        color="success"
+                        sx={{ height: 24, flexShrink: 0 }}
+                      />
+                    )}
+                  </Box>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{
+                      mb: 2,
+                      flexGrow: 1,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      minHeight: '2.5rem',
+                    }}
+                  >
+                    {item.description || '\u00A0'}
+                  </Typography>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 'auto', gap: 1 }}>
+                    <Typography variant="h6" color="primary" fontWeight={700} sx={{ whiteSpace: 'nowrap' }}>
+                      ₹{item.price.toFixed(2)}
+                    </Typography>
+                    {getItemQuantityInCart(item.id) === 0 ? (
+                      <Button
+                        variant="contained"
+                        size="small"
+                        startIcon={<AddIcon />}
+                        onClick={() => addToCart(item, 1)}
+                        sx={{ flexShrink: 0 }}
+                      >
+                        Add
+                      </Button>
+                    ) : (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleQuantityChange(item, getItemQuantityInCart(item.id) - 1)}
+                          color="primary"
+                          sx={{
+                            bgcolor: 'primary.main',
+                            color: 'white',
+                            '&:hover': { bgcolor: 'primary.dark' },
+                            width: 28,
+                            height: 28,
+                          }}
+                        >
+                          <RemoveIcon fontSize="small" />
+                        </IconButton>
+                        <Typography
+                          variant="body1"
+                          sx={{
+                            minWidth: 32,
+                            textAlign: 'center',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {getItemQuantityInCart(item.id)}
+                        </Typography>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleQuantityChange(item, getItemQuantityInCart(item.id) + 1)}
+                          color="primary"
+                          sx={{
+                            bgcolor: 'primary.main',
+                            color: 'white',
+                            '&:hover': { bgcolor: 'primary.dark' },
+                            width: 28,
+                            height: 28,
+                          }}
+                        >
+                          <AddIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    )}
+                  </Box>
+                </CardContent>
+              </Card>
+                ))}
+              </Box>
+            </Box>
+          )}
+
+          {/* Regular Items */}
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: '1fr',
+                sm: 'repeat(2, 1fr)',
+                md: 'repeat(3, 1fr)',
+              },
+              gap: 3,
+            }}
+          >
+            {regularItems.map((item) => (
+              <Card
+                key={item.id}
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  height: '100%',
+                }}
+              >
                 {item.image_url && (
                   <CardMedia
                     component="img"
@@ -372,10 +516,11 @@ function MenuContent() {
                   </Box>
                 </CardContent>
               </Card>
-          ))}
+            ))}
+          </Box>
         </Box>
 
-        {filteredItems.length === 0 && (
+        {(topSellingItems.length === 0 && regularItems.length === 0) && (
           <Box sx={{ textAlign: 'center', py: 8 }}>
             <Typography variant="h6" color="text.secondary">
               No items available in this category
