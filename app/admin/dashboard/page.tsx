@@ -46,6 +46,7 @@ import { Order, OrderStatus, BuzzerNotification as BuzzerNotificationType } from
 import { useRouter } from 'next/navigation';
 import { initializeNotifications, showLocalNotification, checkNotificationSupport } from '@/lib/notifications';
 import { initializePushNotifications } from '@/lib/fcm-notifications';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const statusLabels: Record<OrderStatus, string> = {
   pending: 'Pending',
@@ -73,6 +74,7 @@ interface OrderWithItems extends Order {
   order_items: Array<{
     id: string;
     name: string;
+    gujarati_name?: string | null;
     price: number;
     quantity: number;
     special_instructions: string | null;
@@ -89,9 +91,18 @@ interface Bill {
 
 function DashboardContent() {
   const router = useRouter();
+  const { language } = useLanguage();
   const [orders, setOrders] = useState<OrderWithItems[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Helper function to get item name in current language
+  const getItemName = (item: { name: string; gujarati_name?: string | null }) => {
+    if (language === 'gu' && item.gujarati_name) {
+      return item.gujarati_name;
+    }
+    return item.name;
+  };
   const [buzzerNotifications, setBuzzerNotifications] = useState<BuzzerNotificationType[]>([]);
   const [currentNotification, setCurrentNotification] = useState<BuzzerNotificationType | null>(null);
   const [notificationQueue, setNotificationQueue] = useState<BuzzerNotificationType[]>([]);
@@ -552,7 +563,7 @@ function DashboardContent() {
                 ${order.order_items.map(item => `
                   <tr>
                     <td>
-                      ${item.name}
+                      ${getItemName(item)}
                       ${item.special_instructions ? `<br><small style="color: #666;">Note: ${item.special_instructions}</small>` : ''}
                     </td>
                     <td class="text-right">${item.quantity}</td>
@@ -870,7 +881,7 @@ function DashboardContent() {
                                 {order.order_items.map((item) => (
                                   <TableRow key={item.id}>
                                     <TableCell>
-                                      <Typography variant="body2">{item.name}</Typography>
+                                      <Typography variant="body2">{getItemName(item)}</Typography>
                                       {item.special_instructions && (
                                         <Typography variant="caption" color="text.secondary">
                                           Note: {item.special_instructions}
