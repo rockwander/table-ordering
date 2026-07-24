@@ -35,6 +35,19 @@ async function clearDatabase() {
       console.log('✅ Orders deleted');
     }
 
+    // Delete all bills
+    console.log('Deleting bills...');
+    const { error: billsError } = await supabase
+      .from('bills')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows
+
+    if (billsError) {
+      console.error('❌ Error deleting bills:', billsError);
+    } else {
+      console.log('✅ Bills deleted');
+    }
+
     // Delete all buzzer notifications
     console.log('Deleting buzzer notifications...');
     const { error: buzzerError } = await supabase
