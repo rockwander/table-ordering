@@ -41,8 +41,9 @@ jobs:
       - name: Get SHA-1 Fingerprint
         run: |
           cd android
-          ./gradlew signingReport | grep -A 2 "SHA1:" || true
-          echo "=== SHA-1 fingerprint above - add this to Firebase Console ==="
+          echo "=== Getting SHA-1 and SHA-256 fingerprints for Firebase ==="
+          ./gradlew signingReport
+          echo "=== Copy the SHA1 value above and add to Firebase Console ==="
 
       - name: Build APK
         run: cd android && ./gradlew assembleDebug --no-daemon
