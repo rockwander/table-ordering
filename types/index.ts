@@ -44,6 +44,18 @@ export type Order = {
   total: number;
   notes: string | null;
   viewed_by_admin: boolean;
+  bill_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Bill = {
+  id: string;
+  bill_number: string;
+  table_number: string;
+  subtotal: number;
+  total: number;
+  settled_at: string;
   created_at: string;
   updated_at: string;
 };
@@ -81,6 +93,10 @@ export interface MenuItemWithCategory extends MenuItem {
 
 export interface OrderWithItems extends Order {
   order_items: OrderItem[];
+}
+
+export interface BillWithOrders extends Bill {
+  orders: OrderWithItems[];
 }
 
 export type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'served' | 'bill_requested' | 'paid' | 'cancelled';

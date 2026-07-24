@@ -105,14 +105,8 @@ function CartContent() {
     }
   };
 
-  const calculateTax = (subtotal: number) => {
-    if (!settings) return 0;
-    return (subtotal * settings.tax_rate) / 100;
-  };
-
   const newCartSubtotal = getCartTotal();
-  const newCartTax = calculateTax(newCartSubtotal);
-  const newCartTotal = newCartSubtotal + newCartTax;
+  const newCartTotal = newCartSubtotal; // No tax applied
 
   const outstandingTotal = outstandingOrders.reduce((sum, order) => sum + order.total, 0);
   const grandTotal = outstandingTotal + newCartTotal;
@@ -134,7 +128,7 @@ function CartContent() {
           table_number: tableNumber!,
           status: 'pending',
           subtotal: newCartSubtotal,
-          tax: newCartTax,
+          tax: 0,
           total: newCartTotal,
           notes: orderNotes || null,
         })
@@ -438,18 +432,6 @@ function CartContent() {
                   >
                     <Typography variant="body1">New Order Subtotal</Typography>
                     <Typography variant="body1">₹{newCartSubtotal.toFixed(2)}</Typography>
-                  </Box>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      mb: 1,
-                    }}
-                  >
-                    <Typography variant="body1">
-                      Tax ({settings?.tax_rate || 0}%)
-                    </Typography>
-                    <Typography variant="body1">₹{newCartTax.toFixed(2)}</Typography>
                   </Box>
                   <Box
                     sx={{

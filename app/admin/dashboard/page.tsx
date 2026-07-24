@@ -36,6 +36,7 @@ import CurrencyRupeeIcon from '@mui/icons-material/CurrencyRupee';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import PrintIcon from '@mui/icons-material/Print';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminLayout from '@/components/AdminLayout';
@@ -424,20 +425,147 @@ function DashboardContent() {
       const orderIds = bill.orders.map(order => order.id);
       const settlementTime = new Date().toISOString();
 
-      const { error } = await supabase
+      // Calculate bill totals
+      const billSubtotal = bill.orders.reduce((sum, order) => sum + order.subtotal, 0);
+      const billTotal = bill.orders.reduce((sum, order) => sum + order.total, 0);
+
+      // Generate bill number (format: BILL-YYYYMMDD-HHMMSS)
+      const now = new Date();
+      const billNumber = `BILL-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+
+      // Create bill record
+      const { data: billRecord, error: billError } = await supabase
+        .from('bills')
+        .insert({
+          bill_number: billNumber,
+          table_number: bill.table_number,
+          subtotal: billSubtotal,
+          total: billTotal,
+          settled_at: settlementTime,
+        })
+        .select()
+        .single();
+
+      if (billError) throw billError;
+
+      // Update orders with bill_id and mark as paid
+      const { error: ordersError } = await supabase
         .from('orders')
-        .update({ status: 'paid', updated_at: settlementTime })
+        .update({
+          status: 'paid',
+          bill_id: billRecord.id,
+          updated_at: settlementTime
+        })
         .in('id', orderIds);
 
-      if (error) throw error;
+      if (ordersError) throw ordersError;
 
       await fetchDashboardData();
     } catch (error) {
       console.error('Error settling bill:', error);
-      alert('Failed to settle bill');
+      alert('Failed to settle bill. Please try again.');
     } finally {
       setSettlingBill(null);
     }
+  };
+
+  const handlePrintBill = (bill: Bill) => {
+    // Create a printable HTML version of the bill
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Please allow popups to print bills');
+      return;
+    }
+
+    const billHTML = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Bill #${bill.bill_id}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+          h1 { text-align: center; color: #D4691A; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .bill-info { margin-bottom: 20px; }
+          .bill-info p { margin: 5px 0; }
+          table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+          th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+          th { background-color: #f5f5f5; font-weight: 600; }
+          .text-right { text-align: right; }
+          .order-section { margin: 30px 0; }
+          .order-header { background-color: #f9f9f9; padding: 10px; margin: 15px 0 10px 0; font-weight: 600; }
+          .totals { margin-top: 30px; border-top: 2px solid #333; padding-top: 15px; }
+          .total-row { display: flex; justify-content: space-between; margin: 8px 0; font-size: 14px; }
+          .grand-total { font-size: 18px; font-weight: 700; margin-top: 15px; padding-top: 15px; border-top: 2px solid #333; }
+          .footer { text-align: center; margin-top: 40px; font-size: 12px; color: #666; }
+          @media print {
+            body { padding: 0; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Ramani's Cafe</h1>
+          <p>Table: ${bill.table_number}</p>
+          <p>Date: ${new Date(bill.settled_at || new Date()).toLocaleString()}</p>
+        </div>
+
+        ${bill.orders.map((order, index) => `
+          <div class="order-section">
+            <div class="order-header">Order #${index + 1} - ${new Date(order.created_at).toLocaleTimeString()}</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th class="text-right">Qty</th>
+                  <th class="text-right">Price</th>
+                  <th class="text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${order.order_items.map(item => `
+                  <tr>
+                    <td>
+                      ${item.name}
+                      ${item.special_instructions ? `<br><small style="color: #666;">Note: ${item.special_instructions}</small>` : ''}
+                    </td>
+                    <td class="text-right">${item.quantity}</td>
+                    <td class="text-right">₹${item.price.toFixed(2)}</td>
+                    <td class="text-right">₹${(item.quantity * item.price).toFixed(2)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `).join('')}
+
+        <div class="totals">
+          <div class="total-row">
+            <span>Subtotal:</span>
+            <span>₹${bill.total.toFixed(2)}</span>
+          </div>
+          <div class="total-row grand-total">
+            <span>Grand Total:</span>
+            <span>₹${bill.total.toFixed(2)}</span>
+          </div>
+        </div>
+
+        <div class="footer">
+          <p>Thank you for dining with us!</p>
+          <p>Ramani's Cafe - Premium South Indian Cuisine</p>
+        </div>
+
+        <div class="no-print" style="text-align: center; margin-top: 30px;">
+          <button onclick="window.print()" style="padding: 10px 30px; background: #D4691A; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer;">Print Bill</button>
+          <button onclick="window.close()" style="padding: 10px 30px; background: #666; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; margin-left: 10px;">Close</button>
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(billHTML);
+    printWindow.document.close();
   };
 
   const handleDeleteOrder = async (orderId: string) => {
@@ -746,14 +874,25 @@ function DashboardContent() {
 
                     {/* Bill Actions */}
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mt: 2 }}>
-                      <Button
-                        variant="outlined"
-                        color="error"
-                        startIcon={<DeleteIcon />}
-                        onClick={() => openDeleteDialog('bill', undefined, bill)}
-                      >
-                        Delete Bill
-                      </Button>
+                      <Box sx={{ display: 'flex', gap: 2 }}>
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          startIcon={<DeleteIcon />}
+                          onClick={() => openDeleteDialog('bill', undefined, bill)}
+                        >
+                          Delete Bill
+                        </Button>
+                        {viewTab === 'settled' && (
+                          <Button
+                            variant="outlined"
+                            startIcon={<PrintIcon />}
+                            onClick={() => handlePrintBill(bill)}
+                          >
+                            Print Bill
+                          </Button>
+                        )}
+                      </Box>
                       {viewTab === 'unsettled' && (
                         <Button
                           variant="contained"
