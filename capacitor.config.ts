@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: "Ramani's Cafe Admin",
   webDir: 'public',
   server: {
-    url: 'https://table-ordering-gamma.vercel.app',
+    url: 'https://table-ordering-gamma.vercel.app/mobile/dashboard',
     cleartext: false,
     androidScheme: 'https'
   },
