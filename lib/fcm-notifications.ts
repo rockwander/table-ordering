@@ -25,7 +25,7 @@ export const initializePushNotifications = async () => {
       id: 'orders',
       name: 'Order Notifications',
       description: 'Notifications for new orders and waiter calls',
-      sound: 'content://settings/system/alarm_alert', // Use system alarm sound (loud!)
+      sound: 'alarm.ogg', // Custom alarm sound
       importance: 5, // Max importance - shows as heads-up notification
       visibility: 1, // Public
       lights: true,
