@@ -101,8 +101,8 @@ function DashboardContent() {
   const [stats, setStats] = useState({
     todayOrders: 0,
     todayRevenue: 0,
-    monthlyOrders: 0,
-    monthlyRevenue: 0,
+    pendingOrders: 0,
+    pendingTotal: 0,
   });
 
   // Initialize web push notifications
@@ -270,10 +270,6 @@ function DashboardContent() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const monthStart = new Date();
-      monthStart.setDate(1);
-      monthStart.setHours(0, 0, 0, 0);
-
       // Fetch today's orders with items
       const { data: todayOrdersData, error: todayOrdersError } = await supabase
         .from('orders')
@@ -289,33 +285,23 @@ function DashboardContent() {
       const todayOrders: OrderWithItems[] = todayOrdersData || [];
       setOrders(todayOrders);
 
-      // Fetch this month's orders for stats
-      const { data: monthOrdersData, error: monthOrdersError } = await supabase
-        .from('orders')
-        .select('*')
-        .gte('created_at', monthStart.toISOString());
-
-      if (monthOrdersError) throw monthOrdersError;
-
-      const monthOrders = monthOrdersData || [];
-
       // Calculate stats
       const todayOrdersCount = todayOrders.length || 0;
       const todayRevenue =
         todayOrders
           .filter((o) => o.status === 'paid')
           .reduce((sum, o) => sum + o.total, 0) || 0;
-      const monthlyOrdersCount = monthOrders.length || 0;
-      const monthlyRevenue =
-        monthOrders
-          .filter((o) => o.status === 'paid')
-          .reduce((sum, o) => sum + o.total, 0) || 0;
+
+      const pendingOrders = todayOrders.filter((o) => o.status !== 'paid');
+      const pendingOrdersCount = pendingOrders.length || 0;
+      const pendingTotal =
+        pendingOrders.reduce((sum, o) => sum + o.total, 0) || 0;
 
       setStats({
         todayOrders: todayOrdersCount,
         todayRevenue,
-        monthlyOrders: monthlyOrdersCount,
-        monthlyRevenue,
+        pendingOrders: pendingOrdersCount,
+        pendingTotal,
       });
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -554,88 +540,85 @@ function DashboardContent() {
         Welcome to Ramani's Cafe Admin Panel
       </Typography>
 
-      {/* Stats Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <ReceiptLongIcon color="primary" sx={{ mr: 1 }} />
-                <Typography variant="body2" color="text.secondary">
-                  Today's Orders
-                </Typography>
-              </Box>
-              <Typography variant="h4" fontWeight={700}>
-                {stats.todayOrders}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <CurrencyRupeeIcon color="success" sx={{ mr: 1 }} />
-                <Typography variant="body2" color="text.secondary">
-                  Today's Revenue
-                </Typography>
-              </Box>
-              <Typography variant="h4" fontWeight={700} color="success.main">
-                ₹{stats.todayRevenue.toFixed(2)}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <TrendingUpIcon color="info" sx={{ mr: 1 }} />
-                <Typography variant="body2" color="text.secondary">
-                  Monthly Orders
-                </Typography>
-              </Box>
-              <Typography variant="h4" fontWeight={700} color="info.main">
-                {stats.monthlyOrders}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <CurrencyRupeeIcon color="primary" sx={{ mr: 1 }} />
-                <Typography variant="body2" color="text.secondary">
-                  Monthly Revenue
-                </Typography>
-              </Box>
-              <Typography variant="h4" fontWeight={700} color="primary.main">
-                ₹{stats.monthlyRevenue.toFixed(2)}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
       {/* Orders Section with Tabs */}
       <Card>
+        <CardContent sx={{ pb: 0 }}>
+          <Typography variant="h5" fontWeight={700} gutterBottom>
+            Today's Orders
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </Typography>
+        </CardContent>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs value={viewTab} onChange={(e, newValue) => setViewTab(newValue)}>
-            <Tab label="Unsettled Orders" value="unsettled" />
-            <Tab label="Settled Orders" value="settled" />
+            <Tab label="Pending Bills" value="unsettled" />
+            <Tab label="Settled Bills" value="settled" />
           </Tabs>
         </Box>
 
         <CardContent>
+          {/* Stats Cards */}
+          <Grid container spacing={2} sx={{ mb: 3 }}>
+            <Grid item xs={12} sm={6} md={3}>
+              <Box sx={{ p: 2, bgcolor: 'primary.50', borderRadius: 1, border: '1px solid', borderColor: 'primary.200' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <ReceiptLongIcon color="primary" sx={{ mr: 1, fontSize: 20 }} />
+                  <Typography variant="body2" color="text.secondary">
+                    Today's Orders
+                  </Typography>
+                </Box>
+                <Typography variant="h5" fontWeight={700}>
+                  {stats.todayOrders}
+                </Typography>
+              </Box>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={3}>
+              <Box sx={{ p: 2, bgcolor: 'success.50', borderRadius: 1, border: '1px solid', borderColor: 'success.200' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <CurrencyRupeeIcon color="success" sx={{ mr: 1, fontSize: 20 }} />
+                  <Typography variant="body2" color="text.secondary">
+                    Today's Revenue
+                  </Typography>
+                </Box>
+                <Typography variant="h5" fontWeight={700} color="success.main">
+                  ₹{stats.todayRevenue.toFixed(2)}
+                </Typography>
+              </Box>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={3}>
+              <Box sx={{ p: 2, bgcolor: 'warning.50', borderRadius: 1, border: '1px solid', borderColor: 'warning.200' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <TrendingUpIcon color="warning" sx={{ mr: 1, fontSize: 20 }} />
+                  <Typography variant="body2" color="text.secondary">
+                    Pending Orders
+                  </Typography>
+                </Box>
+                <Typography variant="h5" fontWeight={700} color="warning.main">
+                  {stats.pendingOrders}
+                </Typography>
+              </Box>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={3}>
+              <Box sx={{ p: 2, bgcolor: 'info.50', borderRadius: 1, border: '1px solid', borderColor: 'info.200' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <CurrencyRupeeIcon color="info" sx={{ mr: 1, fontSize: 20 }} />
+                  <Typography variant="body2" color="text.secondary">
+                    Pending Total
+                  </Typography>
+                </Box>
+                <Typography variant="h5" fontWeight={700} color="info.main">
+                  ₹{stats.pendingTotal.toFixed(2)}
+                </Typography>
+              </Box>
+            </Grid>
+          </Grid>
+
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="h6" fontWeight={700}>
-                {viewTab === 'unsettled' ? 'Unsettled Orders' : 'Settled Bills'}
-              </Typography>
               {refreshing && (
                 <Chip
                   label="Refreshing..."
@@ -652,14 +635,14 @@ function DashboardContent() {
               )}
             </Box>
             <Button variant="outlined" onClick={() => router.push('/admin/orders')}>
-              View History
+              View All History
             </Button>
           </Box>
 
           {bills.length === 0 ? (
             <Box sx={{ textAlign: 'center', py: 4 }}>
               <Typography color="text.secondary">
-                No {viewTab} orders
+                {viewTab === 'unsettled' ? 'No pending bills for today' : 'No settled bills for today'}
               </Typography>
             </Box>
           ) : (

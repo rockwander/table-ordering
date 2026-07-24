@@ -279,7 +279,7 @@ function MenuContent() {
                     height="140"
                     image={item.image_url}
                     alt={item.name}
-                    sx={{ objectFit: 'cover' }}
+                    sx={{ objectFit: 'cover', objectPosition: 'center' }}
                   />
                 )}
                 <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 2 }}>
@@ -443,7 +443,7 @@ function MenuContent() {
                             height="140"
                             image={item.image_url}
                             alt={item.name}
-                            sx={{ objectFit: 'cover' }}
+                            sx={{ objectFit: 'cover', objectPosition: 'center' }}
                           />
                         )}
                         <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 2 }}>
@@ -601,7 +601,7 @@ function MenuContent() {
                             height="140"
                             image={item.image_url}
                             alt={item.name}
-                            sx={{ objectFit: 'cover' }}
+                            sx={{ objectFit: 'cover', objectPosition: 'center' }}
                           />
                         )}
                         <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 2 }}>
@@ -746,7 +746,7 @@ function MenuContent() {
                     height="140"
                     image={item.image_url}
                     alt={item.name}
-                    sx={{ objectFit: 'cover' }}
+                    sx={{ objectFit: 'cover', objectPosition: 'center' }}
                   />
                 )}
                 <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 2 }}>

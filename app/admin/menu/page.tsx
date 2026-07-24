@@ -33,6 +33,7 @@ import {
   TableRow,
   Paper,
   Avatar,
+  Checkbox,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -70,9 +71,11 @@ interface SortableRowProps {
   onDelete: (id: string) => void;
   onToggleTopSelling: (id: string, currentStatus: boolean) => void;
   onImageClick: (item: MenuItemType) => void;
+  selected: boolean;
+  onToggleSelect: (id: string) => void;
 }
 
-function SortableRow({ item, onEdit, onDelete, onToggleTopSelling, onImageClick }: SortableRowProps) {
+function SortableRow({ item, onEdit, onDelete, onToggleTopSelling, onImageClick, selected, onToggleSelect }: SortableRowProps) {
   const {
     attributes,
     listeners,
@@ -89,7 +92,13 @@ function SortableRow({ item, onEdit, onDelete, onToggleTopSelling, onImageClick 
   };
 
   return (
-    <TableRow ref={setNodeRef} style={style} hover>
+    <TableRow ref={setNodeRef} style={style} hover selected={selected}>
+      <TableCell padding="checkbox">
+        <Checkbox
+          checked={selected}
+          onChange={() => onToggleSelect(item.id)}
+        />
+      </TableCell>
       <TableCell {...attributes} {...listeners} sx={{ cursor: 'grab', width: 50 }}>
         <DragIndicatorIcon sx={{ color: 'action.disabled' }} />
       </TableCell>
@@ -150,6 +159,8 @@ function MenuContent() {
   const [menuItems, setMenuItems] = useState<MenuItemType[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState(0);
+  const [availabilityFilter, setAvailabilityFilter] = useState<'active' | 'inactive'>('active');
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
 
   // Initialize sensors once for all drag-and-drop contexts
   const sensors = useSensors(
@@ -195,6 +206,11 @@ function MenuContent() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    // Clear selections when changing availability filter
+    setSelectedItems(new Set());
+  }, [availabilityFilter]);
 
   const fetchData = async () => {
     try {
@@ -421,6 +437,72 @@ function MenuContent() {
     }
   };
 
+  const handleToggleSelect = (itemId: string) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(itemId)) {
+      newSelected.delete(itemId);
+    } else {
+      newSelected.add(itemId);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const handleSelectAll = (categoryId: string) => {
+    const categoryItems = getFilteredMenuItems().filter(item => item.category_id === categoryId);
+    const categoryItemIds = categoryItems.map(item => item.id);
+    const allSelected = categoryItemIds.every(id => selectedItems.has(id));
+
+    const newSelected = new Set(selectedItems);
+    if (allSelected) {
+      categoryItemIds.forEach(id => newSelected.delete(id));
+    } else {
+      categoryItemIds.forEach(id => newSelected.add(id));
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const handleBulkUpdateAvailability = async (isAvailable: boolean) => {
+    if (selectedItems.size === 0) {
+      setError('No items selected');
+      return;
+    }
+
+    const action = isAvailable ? 'activate' : 'deactivate';
+    if (!confirm(`Are you sure you want to ${action} ${selectedItems.size} item(s)?`)) return;
+
+    setSaving(true);
+    setError('');
+
+    try {
+      const updates = Array.from(selectedItems).map(itemId =>
+        supabase
+          .from('menu_items')
+          .update({ is_available: isAvailable })
+          .eq('id', itemId)
+      );
+
+      const results = await Promise.all(updates);
+      const errors = results.filter(result => result.error);
+
+      if (errors.length > 0) {
+        throw new Error(`Failed to update ${errors.length} item(s)`);
+      }
+
+      await fetchData();
+      setSelectedItems(new Set());
+    } catch (error: any) {
+      setError(error.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getFilteredMenuItems = () => {
+    return menuItems.filter(item =>
+      availabilityFilter === 'active' ? item.is_available : !item.is_available
+    );
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
@@ -505,7 +587,7 @@ function MenuContent() {
 
       {selectedTab === 1 && (
         <Box>
-          <Box sx={{ mb: 3 }}>
+          <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
             <Button
               variant="contained"
               startIcon={<AddIcon />}
@@ -513,11 +595,48 @@ function MenuContent() {
             >
               Add Menu Item
             </Button>
+
+            {selectedItems.size > 0 && (
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                <Chip label={`${selectedItems.size} selected`} color="primary" />
+                {availabilityFilter === 'active' ? (
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    size="small"
+                    onClick={() => handleBulkUpdateAvailability(false)}
+                    disabled={saving}
+                  >
+                    Mark as Inactive
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outlined"
+                    color="success"
+                    size="small"
+                    onClick={() => handleBulkUpdateAvailability(true)}
+                    disabled={saving}
+                  >
+                    Mark as Active
+                  </Button>
+                )}
+              </Box>
+            )}
+          </Box>
+
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+            <Tabs value={availabilityFilter} onChange={(_, v) => setAvailabilityFilter(v)}>
+              <Tab label="Active Items" value="active" />
+              <Tab label="Inactive Items" value="inactive" />
+            </Tabs>
           </Box>
 
           {categories.map((category) => {
-            const categoryItems = menuItems.filter(item => item.category_id === category.id);
+            const categoryItems = getFilteredMenuItems().filter(item => item.category_id === category.id);
             if (categoryItems.length === 0) return null;
+
+            const allSelected = categoryItems.every(item => selectedItems.has(item.id));
+            const someSelected = categoryItems.some(item => selectedItems.has(item.id)) && !allSelected;
 
             return (
               <Box key={category.id} sx={{ mb: 4 }}>
@@ -534,6 +653,13 @@ function MenuContent() {
                     <Table>
                       <TableHead>
                         <TableRow>
+                          <TableCell padding="checkbox">
+                            <Checkbox
+                              checked={allSelected}
+                              indeterminate={someSelected}
+                              onChange={() => handleSelectAll(category.id)}
+                            />
+                          </TableCell>
                           <TableCell sx={{ width: 50 }}></TableCell>
                           <TableCell>Name</TableCell>
                           <TableCell>Price</TableCell>
@@ -556,6 +682,8 @@ function MenuContent() {
                               onDelete={handleDeleteItem}
                               onToggleTopSelling={handleToggleTopSelling}
                               onImageClick={handleOpenImageDialog}
+                              selected={selectedItems.has(item.id)}
+                              onToggleSelect={handleToggleSelect}
                             />
                           ))}
                         </SortableContext>
@@ -567,13 +695,15 @@ function MenuContent() {
             );
           })}
 
-          {menuItems.length === 0 && (
+          {getFilteredMenuItems().length === 0 && (
             <Box sx={{ textAlign: 'center', py: 8 }}>
               <Typography variant="h6" color="text.secondary">
-                No menu items yet
+                {availabilityFilter === 'active' ? 'No active menu items' : 'No inactive menu items'}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                Create your first menu item to get started
+                {availabilityFilter === 'active'
+                  ? 'Create your first menu item to get started'
+                  : 'All items are currently active'}
               </Typography>
             </Box>
           )}
