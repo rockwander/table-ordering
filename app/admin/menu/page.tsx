@@ -134,6 +134,14 @@ function MenuContent() {
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState(0);
 
+  // Initialize sensors once for all drag-and-drop contexts
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   // Category Dialog State
   const [categoryDialog, setCategoryDialog] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -460,13 +468,6 @@ function MenuContent() {
           {categories.map((category) => {
             const categoryItems = menuItems.filter(item => item.category_id === category.id);
             if (categoryItems.length === 0) return null;
-
-            const sensors = useSensors(
-              useSensor(PointerSensor),
-              useSensor(KeyboardSensor, {
-                coordinateGetter: sortableKeyboardCoordinates,
-              })
-            );
 
             return (
               <Box key={category.id} sx={{ mb: 4 }}>
