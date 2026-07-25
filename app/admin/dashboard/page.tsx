@@ -84,6 +84,7 @@ interface OrderWithItems extends Order {
     quantity: number;
     special_instructions: string | null;
   }>;
+  orderNumber?: number; // Assigned based on chronological order within bill
 }
 
 interface Bill {
@@ -512,8 +513,17 @@ function DashboardContent() {
       }, {} as Record<string, OrderWithItems[]>);
 
       return Object.entries(grouped).map(([tableNum, orders]) => {
-        // Sort orders within bill: most recent first
-        const sortedOrders = orders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        // First sort by creation time to assign proper order numbers (oldest = #1)
+        const ordersWithNumbers = orders
+          .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+          .map((order, index) => ({
+            ...order,
+            orderNumber: index + 1, // Assign order number based on chronological order
+          }));
+
+        // Then reverse for display (most recent first)
+        const sortedOrders = [...ordersWithNumbers].reverse();
+
         return {
           bill_id: `table-${tableNum}-active`,
           table_number: tableNum,
@@ -544,13 +554,23 @@ function DashboardContent() {
         return acc;
       }, {} as Record<string, { table_number: string; orders: OrderWithItems[]; settled_at: string }>);
 
-      return Object.entries(grouped).map(([billKey, data]) => ({
-        bill_id: billKey,
-        table_number: data.table_number,
-        orders: data.orders.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
-        total: data.orders.reduce((sum, order) => sum + order.total, 0),
-        settled_at: data.settled_at,
-      })).sort((a, b) => new Date(b.settled_at!).getTime() - new Date(a.settled_at!).getTime()); // Most recent first
+      return Object.entries(grouped).map(([billKey, data]) => {
+        // Assign order numbers based on chronological order
+        const ordersWithNumbers = data.orders
+          .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+          .map((order, index) => ({
+            ...order,
+            orderNumber: index + 1,
+          }));
+
+        return {
+          bill_id: billKey,
+          table_number: data.table_number,
+          orders: ordersWithNumbers,
+          total: data.orders.reduce((sum, order) => sum + order.total, 0),
+          settled_at: data.settled_at,
+        };
+      }).sort((a, b) => new Date(b.settled_at!).getTime() - new Date(a.settled_at!).getTime()); // Most recent first
     }
   };
 
@@ -648,7 +668,7 @@ function DashboardContent() {
 
         ${bill.orders.map((order, index) => `
           <div class="order-section">
-            <div class="order-header">Order #${index + 1} - ${new Date(order.created_at).toLocaleTimeString()}</div>
+            <div class="order-header">Order #${order.orderNumber || index + 1} - ${new Date(order.created_at).toLocaleTimeString()}</div>
             <table>
               <thead>
                 <tr>
@@ -977,7 +997,7 @@ function DashboardContent() {
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                             <Box>
                               <Typography variant="subtitle1" fontWeight={600}>
-                                Order #{index + 1}
+                                Order #{order.orderNumber || index + 1}
                               </Typography>
                               <Typography variant="body2" color="text.secondary">
                                 {new Date(order.created_at).toLocaleString()}
