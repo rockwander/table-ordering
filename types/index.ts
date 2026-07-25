@@ -23,6 +23,7 @@ export type MenuItem = {
   id: string;
   category_id: string | null;
   name: string;
+  gujarati_name?: string | null;
   description: string | null;
   price: number;
   image_url: string | null;
@@ -65,6 +66,7 @@ export type OrderItem = {
   order_id: string | null;
   menu_item_id: string | null;
   name: string;
+  gujarati_name?: string | null;
   price: number;
   quantity: number;
   special_instructions: string | null;

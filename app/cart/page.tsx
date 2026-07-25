@@ -142,6 +142,7 @@ function CartContent() {
         order_id: order.id,
         menu_item_id: item.menuItem.id,
         name: item.menuItem.name,
+        gujarati_name: item.menuItem.gujarati_name || null,
         price: item.menuItem.price,
         quantity: item.quantity,
         special_instructions: item.specialInstructions || null,
