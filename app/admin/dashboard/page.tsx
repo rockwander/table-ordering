@@ -217,9 +217,7 @@ function DashboardContent() {
     }
     return item.name;
   };
-  const [buzzerNotifications, setBuzzerNotifications] = useState<BuzzerNotificationType[]>([]);
-  const [currentNotification, setCurrentNotification] = useState<BuzzerNotificationType | null>(null);
-  const [notificationQueue, setNotificationQueue] = useState<BuzzerNotificationType[]>([]);
+  const [activeNotifications, setActiveNotifications] = useState<BuzzerNotificationType[]>([]);
   const [viewTab, setViewTab] = useState<'unsettled' | 'settled' | 'diagnostics'>('unsettled');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'order' | 'bill'; id?: string; bill?: Bill } | null>(null);
@@ -266,14 +264,6 @@ function DashboardContent() {
     setupNotifications();
   }, []);
 
-  // Handle notification queue - show one at a time
-  useEffect(() => {
-    if (!currentNotification && notificationQueue.length > 0) {
-      const [nextNotification, ...rest] = notificationQueue;
-      setCurrentNotification(nextNotification);
-      setNotificationQueue(rest);
-    }
-  }, [currentNotification, notificationQueue]);
 
   // Debounced refresh to prevent multiple rapid calls
   const refreshTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -351,10 +341,8 @@ function DashboardContent() {
           console.log('🔔 Buzzer notification received:', payload);
           const newNotification = payload.new as BuzzerNotificationType;
           if (newNotification.status === 'active') {
-            console.log('✅ Adding buzzer notification for table:', newNotification.table_number);
-            setBuzzerNotifications((prev) => [...prev, newNotification]);
-            // Add to queue instead of showing directly
-            setNotificationQueue((prev) => [...prev, newNotification]);
+            console.log('✅ Adding notification toast for table:', newNotification.table_number);
+            setActiveNotifications((prev) => [...prev, newNotification]);
 
             // Show web push notification (works even when screen is off)
             if (notificationsEnabled) {
@@ -465,36 +453,49 @@ function DashboardContent() {
       if (error) throw error;
 
       if (data && data.length > 0) {
-        console.log(`✅ Found ${data.length} active buzzer notifications`);
-        setBuzzerNotifications(data);
-        // Add all to queue - they'll be shown one at a time
-        setNotificationQueue(data);
+        console.log(`✅ Found ${data.length} active notifications`);
+        setActiveNotifications(data);
       } else {
-        console.log('📭 No active buzzer notifications');
+        console.log('📭 No active notifications');
       }
     } catch (error) {
       console.error('❌ Error fetching active buzzer notifications:', error);
     }
   };
 
-  const handleDismissBuzzer = async (notificationId: string) => {
+  const handleDismissNotification = async (notificationId: string) => {
     try {
-      console.log('🔕 Dismissing buzzer notification:', notificationId);
-      // Update the notification status in the database
+      console.log('🗑️ Dismissing notification:', notificationId);
       await supabase
         .from('buzzer_notifications')
         .update({ status: 'dismissed', dismissed_at: new Date().toISOString() })
         .eq('id', notificationId);
 
       // Remove from local state
-      setBuzzerNotifications((prev) =>
+      setActiveNotifications((prev) =>
         prev.filter((notification) => notification.id !== notificationId)
       );
-
-      // Clear current notification to allow next one to show
-      setCurrentNotification(null);
     } catch (error) {
-      console.error('❌ Error dismissing buzzer notification:', error);
+      console.error('❌ Error dismissing notification:', error);
+    }
+  };
+
+  const handleDismissAllNotifications = async () => {
+    try {
+      console.log('🗑️ Dismissing all notifications');
+      if (activeNotifications.length === 0) return;
+
+      const ids = activeNotifications.map(n => n.id);
+
+      await supabase
+        .from('buzzer_notifications')
+        .update({ status: 'dismissed', dismissed_at: new Date().toISOString() })
+        .in('id', ids);
+
+      // Clear all from local state
+      setActiveNotifications([]);
+    } catch (error) {
+      console.error('❌ Error dismissing all notifications:', error);
     }
   };
 
@@ -800,15 +801,27 @@ function DashboardContent() {
   const bills = groupOrdersIntoBills();
 
   return (
-    <Box>
-      {/* Buzzer Notifications - Show one at a time */}
-      {currentNotification && (
-        <BuzzerNotification
-          key={currentNotification.id}
-          tableNumber={currentNotification.table_number}
-          notificationType={currentNotification.notification_type || 'service_call'}
-          onDismiss={() => handleDismissBuzzer(currentNotification.id)}
-        />
+    <Box onClick={activeNotifications.length > 0 ? handleDismissAllNotifications : undefined}>
+      {/* Toast Notifications - Stacked */}
+      {activeNotifications.length > 0 && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 80,
+            right: 24,
+            zIndex: 2000,
+            maxWidth: 320,
+          }}
+        >
+          {activeNotifications.map((notification) => (
+            <BuzzerNotification
+              key={notification.id}
+              tableNumber={notification.table_number}
+              notificationType={notification.notification_type || 'service_call'}
+              onDismiss={() => handleDismissNotification(notification.id)}
+            />
+          ))}
+        </Box>
       )}
 
       <Typography variant="h4" fontWeight={700} gutterBottom>
