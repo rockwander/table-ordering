@@ -114,22 +114,6 @@ function FCMDebugPanel() {
       return;
     }
 
-    // Just listen for token updates (initialization happens in DashboardContent)
-    const tokenListener = PushNotifications.addListener('registration', (token) => {
-      addLog(`✅ Token registered: ${token.value.substring(0, 30)}...`);
-      setFcmToken(token.value);
-    });
-
-    const errorListener = PushNotifications.addListener('registrationError', (error) => {
-      addLog(`❌ Registration error: ${JSON.stringify(error)}`);
-    });
-
-    const receivedListener = PushNotifications.addListener('pushNotificationReceived', (notification) => {
-      addLog(`📬 Push received: ${notification.title}`);
-    });
-
-    addLog('✅ FCM listeners attached');
-
     // Check for existing token in localStorage
     const existingToken = localStorage.getItem('fcm_token');
     if (existingToken) {
@@ -137,10 +121,34 @@ function FCMDebugPanel() {
       addLog(`✅ Existing token found: ${existingToken.substring(0, 30)}...`);
     }
 
+    // Listen for token updates (initialization happens in DashboardContent)
+    let tokenListener: any;
+    let errorListener: any;
+    let receivedListener: any;
+
+    const setupListeners = async () => {
+      tokenListener = await PushNotifications.addListener('registration', (token) => {
+        addLog(`✅ Token registered: ${token.value.substring(0, 30)}...`);
+        setFcmToken(token.value);
+      });
+
+      errorListener = await PushNotifications.addListener('registrationError', (error) => {
+        addLog(`❌ Registration error: ${JSON.stringify(error)}`);
+      });
+
+      receivedListener = await PushNotifications.addListener('pushNotificationReceived', (notification) => {
+        addLog(`📬 Push received: ${notification.title}`);
+      });
+
+      addLog('✅ FCM listeners attached');
+    };
+
+    setupListeners();
+
     return () => {
-      tokenListener.remove();
-      errorListener.remove();
-      receivedListener.remove();
+      if (tokenListener) tokenListener.remove();
+      if (errorListener) errorListener.remove();
+      if (receivedListener) receivedListener.remove();
     };
   }, []);
 
