@@ -105,65 +105,43 @@ function FCMDebugPanel() {
   };
 
   useEffect(() => {
-    addLog('🔍 FCM Debug starting...');
+    addLog('🔍 FCM Status Monitor starting...');
     const isNative = Capacitor.isNativePlatform();
     addLog(`Platform: ${Capacitor.getPlatform()}, Native: ${isNative}`);
 
     if (!isNative) {
-      addLog('❌ Not native - FCM unavailable');
+      addLog('ℹ️ Not native - FCM handled by initializePushNotifications()');
       return;
     }
 
-    const initFCM = async () => {
-      try {
-        addLog('Checking permissions...');
-        let permStatus = await PushNotifications.checkPermissions();
-        addLog(`Permission: ${permStatus.receive}`);
+    // Just listen for token updates (initialization happens in DashboardContent)
+    const tokenListener = PushNotifications.addListener('registration', (token) => {
+      addLog(`✅ Token registered: ${token.value.substring(0, 30)}...`);
+      setFcmToken(token.value);
+    });
 
-        if (permStatus.receive === 'prompt') {
-          addLog('Requesting permissions...');
-          permStatus = await PushNotifications.requestPermissions();
-          addLog(`After request: ${permStatus.receive}`);
-        }
+    const errorListener = PushNotifications.addListener('registrationError', (error) => {
+      addLog(`❌ Registration error: ${JSON.stringify(error)}`);
+    });
 
-        if (permStatus.receive !== 'granted') {
-          addLog('❌ Permission denied');
-          return;
-        }
+    const receivedListener = PushNotifications.addListener('pushNotificationReceived', (notification) => {
+      addLog(`📬 Push received: ${notification.title}`);
+    });
 
-        addLog('Registering FCM...');
-        await PushNotifications.register();
+    addLog('✅ FCM listeners attached');
 
-        PushNotifications.addListener('registration', (token) => {
-          addLog(`✅ Token: ${token.value.substring(0, 30)}...`);
-          setFcmToken(token.value);
+    // Check for existing token in localStorage
+    const existingToken = localStorage.getItem('fcm_token');
+    if (existingToken) {
+      setFcmToken(existingToken);
+      addLog(`✅ Existing token found: ${existingToken.substring(0, 30)}...`);
+    }
 
-          fetch('/api/save-fcm-token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: token.value }),
-          })
-            .then(res => res.json())
-            .then(data => {
-              if (data.error) {
-                addLog(`❌ Save error: ${data.error}`);
-              } else {
-                addLog('✅ Token saved to DB');
-              }
-            })
-            .catch(err => addLog(`❌ Save failed: ${err.message}`));
-        });
-
-        PushNotifications.addListener('registrationError', (error) => {
-          addLog(`❌ Registration error: ${JSON.stringify(error)}`);
-        });
-
-      } catch (error: any) {
-        addLog(`❌ Init error: ${error.message}`);
-      }
+    return () => {
+      tokenListener.remove();
+      errorListener.remove();
+      receivedListener.remove();
     };
-
-    initFCM();
   }, []);
 
   return (

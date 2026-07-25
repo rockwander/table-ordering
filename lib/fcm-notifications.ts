@@ -86,18 +86,18 @@ const showLocalNotificationWithSound = async (notification: any) => {
   // Request local notification permission
   await LocalNotifications.requestPermissions();
 
-  // Show notification with sound
+  // Show notification with alarm sound (same as when app is closed)
   await LocalNotifications.schedule({
     notifications: [
       {
         title: notification.title || 'New Notification',
         body: notification.body || '',
         id: Date.now(),
-        sound: 'notification.wav', // We'll add custom sound
+        sound: 'alarm.ogg', // Use same alarm sound as background notifications
+        channelId: 'orders', // Use the same channel with alarm sound
         attachments: undefined,
         actionTypeId: '',
         extra: notification.data,
-        ongoing: true, // Keep notification visible
       },
     ],
   });
