@@ -92,6 +92,7 @@ interface Bill {
   orders: OrderWithItems[];
   total: number;
   settled_at?: string;
+  most_recent_order?: string;
 }
 
 function FCMDebugPanel() {
@@ -510,23 +511,20 @@ function DashboardContent() {
         return acc;
       }, {} as Record<string, OrderWithItems[]>);
 
-      return Object.entries(grouped).map(([tableNum, orders]) => ({
-        bill_id: `table-${tableNum}-active`,
-        table_number: tableNum,
-        orders: orders.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
-        total: orders.reduce((sum, order) => sum + order.total, 0),
-      })).sort((a, b) => {
-        // Sort with "counter" first, then natural sort for numbers
-        if (a.table_number === 'counter') return -1;
-        if (b.table_number === 'counter') return 1;
-        // Try to parse as numbers for numeric tables
-        const aNum = parseInt(a.table_number);
-        const bNum = parseInt(b.table_number);
-        if (!isNaN(aNum) && !isNaN(bNum)) {
-          return aNum - bNum;
-        }
-        // Fallback to string comparison
-        return a.table_number.localeCompare(b.table_number);
+      return Object.entries(grouped).map(([tableNum, orders]) => {
+        // Sort orders within bill: most recent first
+        const sortedOrders = orders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        return {
+          bill_id: `table-${tableNum}-active`,
+          table_number: tableNum,
+          orders: sortedOrders,
+          total: orders.reduce((sum, order) => sum + order.total, 0),
+          // Track most recent order time for bill sorting
+          most_recent_order: sortedOrders[0].created_at,
+        };
+      }).sort((a, b) => {
+        // Sort bills by most recent order first
+        return new Date(b.most_recent_order).getTime() - new Date(a.most_recent_order).getTime();
       });
     } else {
       // For settled: group by table + settlement time (orders settled together = one bill)
