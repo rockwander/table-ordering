@@ -28,12 +28,15 @@ import {
   Tabs,
   Tab,
   Alert,
+  AlertTitle,
+  Collapse,
   Divider,
 } from '@mui/material';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import CurrencyRupeeIcon from '@mui/icons-material/CurrencyRupee';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PrintIcon from '@mui/icons-material/Print';
@@ -47,6 +50,8 @@ import { useRouter } from 'next/navigation';
 import { initializeNotifications, showLocalNotification, checkNotificationSupport } from '@/lib/notifications';
 import { initializePushNotifications } from '@/lib/fcm-notifications';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { Capacitor } from '@capacitor/core';
+import { PushNotifications } from '@capacitor/push-notifications';
 
 const statusLabels: Record<OrderStatus, string> = {
   pending: 'Pending',
@@ -89,6 +94,115 @@ interface Bill {
   settled_at?: string;
 }
 
+function FCMDebugPanel() {
+  const [logs, setLogs] = useState<string[]>([]);
+  const [fcmToken, setFcmToken] = useState<string>('');
+  const [expanded, setExpanded] = useState(true);
+
+  const addLog = (message: string) => {
+    console.log(message);
+    setLogs(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
+  };
+
+  useEffect(() => {
+    addLog('🔍 FCM Debug starting...');
+    const isNative = Capacitor.isNativePlatform();
+    addLog(`Platform: ${Capacitor.getPlatform()}, Native: ${isNative}`);
+
+    if (!isNative) {
+      addLog('❌ Not native - FCM unavailable');
+      return;
+    }
+
+    const initFCM = async () => {
+      try {
+        addLog('Checking permissions...');
+        let permStatus = await PushNotifications.checkPermissions();
+        addLog(`Permission: ${permStatus.receive}`);
+
+        if (permStatus.receive === 'prompt') {
+          addLog('Requesting permissions...');
+          permStatus = await PushNotifications.requestPermissions();
+          addLog(`After request: ${permStatus.receive}`);
+        }
+
+        if (permStatus.receive !== 'granted') {
+          addLog('❌ Permission denied');
+          return;
+        }
+
+        addLog('Registering FCM...');
+        await PushNotifications.register();
+
+        PushNotifications.addListener('registration', (token) => {
+          addLog(`✅ Token: ${token.value.substring(0, 30)}...`);
+          setFcmToken(token.value);
+
+          fetch('/api/save-fcm-token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: token.value }),
+          })
+            .then(res => res.json())
+            .then(data => {
+              if (data.error) {
+                addLog(`❌ Save error: ${data.error}`);
+              } else {
+                addLog('✅ Token saved to DB');
+              }
+            })
+            .catch(err => addLog(`❌ Save failed: ${err.message}`));
+        });
+
+        PushNotifications.addListener('registrationError', (error) => {
+          addLog(`❌ Registration error: ${JSON.stringify(error)}`);
+        });
+
+      } catch (error: any) {
+        addLog(`❌ Init error: ${error.message}`);
+      }
+    };
+
+    initFCM();
+  }, []);
+
+  return (
+    <Alert
+      severity={fcmToken ? 'success' : logs.some(l => l.includes('❌')) ? 'error' : 'info'}
+      action={
+        <IconButton
+          size="small"
+          onClick={() => setExpanded(!expanded)}
+        >
+          {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+        </IconButton>
+      }
+    >
+      <AlertTitle>
+        {fcmToken ? '✅ FCM Active' : '⏳ FCM Debug'}
+      </AlertTitle>
+      <Collapse in={expanded}>
+        <Box
+          sx={{
+            fontFamily: 'monospace',
+            fontSize: 11,
+            maxHeight: 300,
+            overflow: 'auto',
+            bgcolor: 'rgba(0,0,0,0.05)',
+            p: 1,
+            mt: 1,
+            borderRadius: 1,
+          }}
+        >
+          {logs.map((log, i) => (
+            <div key={i}>{log}</div>
+          ))}
+        </Box>
+      </Collapse>
+    </Alert>
+  );
+}
+
 function DashboardContent() {
   const router = useRouter();
   const { language } = useLanguage();
@@ -106,7 +220,7 @@ function DashboardContent() {
   const [buzzerNotifications, setBuzzerNotifications] = useState<BuzzerNotificationType[]>([]);
   const [currentNotification, setCurrentNotification] = useState<BuzzerNotificationType | null>(null);
   const [notificationQueue, setNotificationQueue] = useState<BuzzerNotificationType[]>([]);
-  const [viewTab, setViewTab] = useState<'unsettled' | 'settled'>('unsettled');
+  const [viewTab, setViewTab] = useState<'unsettled' | 'settled' | 'diagnostics'>('unsettled');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'order' | 'bill'; id?: string; bill?: Bill } | null>(null);
   const [settlingBill, setSettlingBill] = useState<string | null>(null);
@@ -713,20 +827,44 @@ function DashboardContent() {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             {viewTab === 'unsettled'
               ? 'All pending bills • Settle bills when customers are ready to pay'
-              : `Today's settled bills • ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`
-            }
+              : viewTab === 'settled'
+              ? `Today's settled bills • ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`
+              : 'System diagnostics and push notification status'}
           </Typography>
         </CardContent>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs value={viewTab} onChange={(e, newValue) => setViewTab(newValue)}>
             <Tab label="Pending Bills" value="unsettled" />
             <Tab label="Settled Bills (Today)" value="settled" />
+            <Tab label="System Status" value="diagnostics" />
           </Tabs>
         </Box>
 
         <CardContent>
-          {/* Stats Cards */}
-          <Grid container spacing={2} sx={{ mb: 3 }}>
+          {viewTab === 'diagnostics' ? (
+            <Box>
+              <FCMDebugPanel />
+              <Box sx={{ mt: 3 }}>
+                <Typography variant="h6" fontWeight={600} gutterBottom>
+                  System Information
+                </Typography>
+                <Paper sx={{ p: 2 }}>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Platform: {typeof window !== 'undefined' ? Capacitor.getPlatform() : 'Loading...'}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Native: {typeof window !== 'undefined' ? (Capacitor.isNativePlatform() ? 'Yes' : 'No') : 'Loading...'}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Last Updated: {new Date().toLocaleString()}
+                  </Typography>
+                </Paper>
+              </Box>
+            </Box>
+          ) : (
+            <>
+              {/* Stats Cards */}
+              <Grid container spacing={2} sx={{ mb: 3 }}>
             <Grid item xs={12} sm={6} md={3}>
               <Box sx={{ p: 2, bgcolor: 'primary.50', borderRadius: 1, border: '1px solid', borderColor: 'primary.200' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -948,6 +1086,8 @@ function DashboardContent() {
                 </Accordion>
               ))}
             </Box>
+          )}
+            </>
           )}
         </CardContent>
       </Card>
