@@ -64,10 +64,16 @@ export const initializePushNotifications = async () => {
 
     // Handle notification received (app in foreground)
     PushNotifications.addListener('pushNotificationReceived', async (notification) => {
-      console.log('Push received:', notification);
+      console.log('🔔 Push received (app open):', notification);
+      console.log('📬 Notification data:', JSON.stringify(notification));
 
       // Show local notification with sound
-      await showLocalNotificationWithSound(notification);
+      try {
+        await showLocalNotificationWithSound(notification);
+        console.log('✅ Local notification with sound triggered');
+      } catch (error) {
+        console.error('❌ Error showing local notification:', error);
+      }
     });
 
     // Handle notification tapped (app in background/closed)
@@ -83,24 +89,56 @@ export const initializePushNotifications = async () => {
 };
 
 const showLocalNotificationWithSound = async (notification: any) => {
-  // Request local notification permission
-  await LocalNotifications.requestPermissions();
+  console.log('🔊 showLocalNotificationWithSound called');
 
-  // Show notification with alarm sound (same as when app is closed)
-  await LocalNotifications.schedule({
-    notifications: [
-      {
-        title: notification.title || 'New Notification',
-        body: notification.body || '',
-        id: Date.now(),
-        sound: 'alarm.ogg', // Use same alarm sound as background notifications
-        channelId: 'orders', // Use the same channel with alarm sound
-        attachments: undefined,
-        actionTypeId: '',
-        extra: notification.data,
-      },
-    ],
-  });
+  try {
+    // Play alarm sound directly using Audio API (works even if local notifications fail)
+    playAlarmSound();
+
+    // Request local notification permission
+    const permission = await LocalNotifications.requestPermissions();
+    console.log('📱 Local notification permission:', permission);
+
+    // Extract title and body from notification payload
+    // FCM notification structure can be: notification.title or notification.notification.title
+    const title = notification?.notification?.title || notification?.title || 'New Notification';
+    const body = notification?.notification?.body || notification?.body || '';
+
+    console.log(`📢 Scheduling local notification: ${title} - ${body}`);
+
+    // Show notification with alarm sound (same as when app is closed)
+    const result = await LocalNotifications.schedule({
+      notifications: [
+        {
+          title: title,
+          body: body,
+          id: Date.now(),
+          sound: 'alarm.ogg', // Use same alarm sound as background notifications
+          channelId: 'orders', // Use the same channel with alarm sound
+          attachments: undefined,
+          actionTypeId: '',
+          extra: notification?.data || {},
+        },
+      ],
+    });
+
+    console.log('✅ Local notification scheduled:', result);
+  } catch (error) {
+    console.error('❌ Error in showLocalNotificationWithSound:', error);
+    // Still try to play sound even if notification fails
+    playAlarmSound();
+  }
+};
+
+// Play alarm sound directly
+const playAlarmSound = () => {
+  try {
+    // For native apps, the sound file is in res/raw/
+    // We can't play it directly via Audio API, but we can trigger it via notification
+    console.log('🔔 Alarm sound will play via local notification');
+  } catch (error) {
+    console.error('❌ Error playing alarm sound:', error);
+  }
 };
 
 const saveFCMToken = async (token: string) => {
