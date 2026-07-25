@@ -128,7 +128,7 @@ async function sendNotification(payload: NotificationPayload) {
                 android: {
                   priority: "high",
                   notification: {
-                    sound: "default",
+                    sound: "alarm.ogg",
                     channel_id: "orders",
                     default_sound: false,
                     default_vibrate_timings: false,
@@ -177,7 +177,11 @@ serve(async (req) => {
   try {
     const payload: NotificationPayload = await req.json();
 
-    console.log("Sending FCM notification:", payload);
+    console.log("=== SENDING FCM NOTIFICATION ===");
+    console.log("Title:", payload.title);
+    console.log("Body:", payload.body);
+    console.log("Type:", payload.data?.type);
+    console.log("Table:", payload.data?.tableNumber);
 
     const result = await sendNotification(payload);
 
