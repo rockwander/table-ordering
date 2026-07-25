@@ -12,6 +12,9 @@ export interface NotificationPayload {
   };
 }
 
+// Track handled notifications to prevent duplicate sounds
+const handledNotifications = new Map<string, number>(); // ID -> timestamp
+
 export const initializePushNotifications = async () => {
   // Only run on native platforms
   if (!Capacitor.isNativePlatform()) {
@@ -66,6 +69,30 @@ export const initializePushNotifications = async () => {
     PushNotifications.addListener('pushNotificationReceived', async (notification) => {
       console.log('🔔 Push received (app open):', notification);
       console.log('📬 Notification data:', JSON.stringify(notification));
+
+      // Create unique ID for this notification (using data fields)
+      const notificationId = `${notification?.data?.type || 'unknown'}-${notification?.data?.tableNumber || 'none'}`;
+      const now = Date.now();
+
+      // Check if we handled this notification recently (within 10 seconds)
+      const lastHandled = handledNotifications.get(notificationId);
+      if (lastHandled && (now - lastHandled) < 10000) {
+        console.log('⏭️ Notification handled recently (within 10s), skipping sound:', notificationId);
+        return;
+      }
+
+      // Mark this notification as handled with current timestamp
+      handledNotifications.set(notificationId, now);
+
+      // Clean up old entries (older than 30 seconds)
+      const cutoffTime = now - 30000;
+      for (const [id, timestamp] of handledNotifications.entries()) {
+        if (timestamp < cutoffTime) {
+          handledNotifications.delete(id);
+        }
+      }
+
+      console.log('🆕 New notification, playing sound:', notificationId);
 
       // Show local notification with sound
       try {
