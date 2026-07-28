@@ -134,9 +134,6 @@ function MenuContent() {
   const topSellingItems = selectedCategory === 'all'
     ? filteredItems.filter(item => item.is_top_selling)
     : [];
-  const regularItems = selectedCategory === 'all'
-    ? filteredItems.filter(item => !item.is_top_selling)
-    : filteredItems;
 
   const getItemQuantityInCart = (itemId: string) => {
     const cartItem = cartItems.find((ci) => ci.menuItem.id === itemId);
@@ -152,14 +149,20 @@ function MenuContent() {
   };
 
   // Group top 5 items per category for "All Items" view
+  // Include ALL items (including top-selling) in the top 5 of each category
   const top5ByCategory = selectedCategory === 'all'
     ? categories.map(category => ({
         category,
-        items: regularItems
+        items: filteredItems
           .filter(item => item.category_id === category.id)
-          .slice(0, 5), // Take only top 5
+          .slice(0, 5), // Take only top 5, including top-selling items
       })).filter(group => group.items.length > 0)
     : [];
+
+  // Regular items for "All Items" complete list (exclude top-selling)
+  const regularItems = selectedCategory === 'all'
+    ? filteredItems.filter(item => !item.is_top_selling)
+    : filteredItems;
 
   const handleBuzzer = async () => {
     if (buzzerSending || !tableNumber) return;
