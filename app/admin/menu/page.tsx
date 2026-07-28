@@ -3,11 +3,8 @@
 import { useEffect, useState } from 'react';
 import {
   Box,
-  Card,
-  CardContent,
   Typography,
   Button,
-  Grid,
   Chip,
   IconButton,
   Dialog,
@@ -64,6 +61,60 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+
+interface SortableCategoryRowProps {
+  category: Category;
+  onEdit: (category: Category) => void;
+  onDelete: (id: string) => void;
+}
+
+function SortableCategoryRow({ category, onEdit, onDelete }: SortableCategoryRowProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: category.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <TableRow ref={setNodeRef} style={style} hover>
+      <TableCell {...attributes} {...listeners} sx={{ cursor: 'grab', width: 50 }}>
+        <DragIndicatorIcon sx={{ color: 'action.disabled' }} />
+      </TableCell>
+      <TableCell>
+        <Typography fontWeight={600}>{category.name}</Typography>
+      </TableCell>
+      <TableCell>
+        <Typography variant="body2" color="text.secondary">
+          {category.description || '-'}
+        </Typography>
+      </TableCell>
+      <TableCell align="center">
+        <Chip
+          label={category.is_active ? 'Active' : 'Inactive'}
+          size="small"
+          color={category.is_active ? 'success' : 'default'}
+        />
+      </TableCell>
+      <TableCell align="right">
+        <IconButton size="small" onClick={() => onEdit(category)}>
+          <EditIcon fontSize="small" />
+        </IconButton>
+        <IconButton size="small" color="error" onClick={() => onDelete(category.id)}>
+          <DeleteIcon fontSize="small" />
+        </IconButton>
+      </TableCell>
+    </TableRow>
+  );
+}
 
 interface SortableRowProps {
   item: MenuItemType;
@@ -395,6 +446,45 @@ function MenuContent() {
     }
   };
 
+  const handleCategoryDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = categories.findIndex(cat => cat.id === active.id);
+    const newIndex = categories.findIndex(cat => cat.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reorderedCategories = arrayMove(categories, oldIndex, newIndex);
+
+    // Optimistically update the UI
+    setCategories(reorderedCategories);
+
+    // Update display_order for all categories
+    try {
+      const updates = reorderedCategories.map((category, index) => ({
+        id: category.id,
+        display_order: index,
+      }));
+
+      await Promise.all(
+        updates.map(update =>
+          supabase
+            .from('categories')
+            .update({ display_order: update.display_order })
+            .eq('id', update.id)
+        )
+      );
+
+      await fetchData();
+    } catch (error: any) {
+      setError(error.message);
+      // Revert on error
+      await fetchData();
+    }
+  };
+
   const handleToggleTopSelling = async (itemId: string, currentStatus: boolean) => {
     try {
       const { error } = await supabase
@@ -532,12 +622,12 @@ function MenuContent() {
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={selectedTab} onChange={(_, v) => setSelectedTab(v)}>
-          <Tab label="Categories" />
           <Tab label="Menu Items" />
+          <Tab label="Categories" />
         </Tabs>
       </Box>
 
-      {selectedTab === 0 && (
+      {selectedTab === 1 && (
         <Box>
           <Box sx={{ mb: 2 }}>
             <Button
@@ -549,43 +639,44 @@ function MenuContent() {
             </Button>
           </Box>
 
-          <Grid container spacing={2}>
-            {categories.map((category) => (
-              <Grid item xs={12} sm={6} md={4} key={category.id}>
-                <Card>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 1 }}>
-                      <Typography variant="h6" fontWeight={600}>
-                        {category.name}
-                      </Typography>
-                      <Box>
-                        <IconButton size="small" onClick={() => handleOpenCategoryDialog(category)}>
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton size="small" color="error" onClick={() => handleDeleteCategory(category.id)}>
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Box>
-                    </Box>
-                    {category.description && (
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                        {category.description}
-                      </Typography>
-                    )}
-                    <Chip
-                      label={category.is_active ? 'Active' : 'Inactive'}
-                      size="small"
-                      color={category.is_active ? 'success' : 'default'}
-                    />
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleCategoryDragEnd}
+          >
+            <TableContainer component={Paper} variant="outlined">
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ width: 50 }}></TableCell>
+                    <TableCell>Category Name</TableCell>
+                    <TableCell>Description</TableCell>
+                    <TableCell align="center">Status</TableCell>
+                    <TableCell align="right">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  <SortableContext
+                    items={categories.map(cat => cat.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {categories.map((category) => (
+                      <SortableCategoryRow
+                        key={category.id}
+                        category={category}
+                        onEdit={handleOpenCategoryDialog}
+                        onDelete={handleDeleteCategory}
+                      />
+                    ))}
+                  </SortableContext>
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </DndContext>
         </Box>
       )}
 
-      {selectedTab === 1 && (
+      {selectedTab === 0 && (
         <Box>
           <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
             <Button
