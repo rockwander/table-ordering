@@ -227,26 +227,33 @@ function MenuContent() {
           <Typography variant="h4" gutterBottom fontWeight={700}>
             Our Menu
           </Typography>
-          <Box>
-            <Chip
-              label="10% off on all orders placed via this app"
+          <Box
+            sx={{
+              bgcolor: 'success.main',
+              color: 'white',
+              px: 2,
+              py: 1.5,
+              borderRadius: 1,
+              display: 'inline-block',
+            }}
+          >
+            <Typography
+              variant="body2"
               sx={{
-                bgcolor: 'success.main',
-                color: 'white',
                 fontWeight: 600,
                 fontSize: '0.95rem',
-                px: 1,
-                py: 2.5,
-                height: 'auto',
-                '& .MuiChip-label': {
-                  px: 2,
-                },
               }}
-            />
+            >
+              10% off on all orders placed via this app
+            </Typography>
             <Typography
               variant="caption"
-              color="text.secondary"
-              sx={{ fontStyle: 'italic', display: 'block', mt: 0.5 }}
+              sx={{
+                fontStyle: 'italic',
+                display: 'block',
+                mt: 0.5,
+                opacity: 0.9,
+              }}
             >
               Offer will be auto-applied while settling bill
             </Typography>
