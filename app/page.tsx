@@ -34,6 +34,9 @@ export default function Home() {
       <Typography variant="body2" color="text.secondary">
         Loading menu...
       </Typography>
+      <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic', mt: 2 }}>
+        10% discount auto-applied while settling bill
+      </Typography>
     </Box>
   );
 }
