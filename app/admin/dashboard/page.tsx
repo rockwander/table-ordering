@@ -700,9 +700,13 @@ function DashboardContent() {
             <span>Subtotal:</span>
             <span>₹${bill.total.toFixed(2)}</span>
           </div>
+          <div class="total-row" style="color: #22c55e; font-weight: 600;">
+            <span>App Discount (10%):</span>
+            <span>- ₹${(bill.total * 0.1).toFixed(2)}</span>
+          </div>
           <div class="total-row grand-total">
-            <span>Grand Total:</span>
-            <span>₹${bill.total.toFixed(2)}</span>
+            <span>Final Amount:</span>
+            <span>₹${(bill.total * 0.9).toFixed(2)}</span>
           </div>
         </div>
 
@@ -984,9 +988,14 @@ function DashboardContent() {
                           </Typography>
                         )}
                       </Box>
-                      <Typography variant="h6" fontWeight={700} color="primary">
-                        ₹{bill.total.toFixed(2)}
-                      </Typography>
+                      <Box sx={{ textAlign: 'right' }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
+                          ₹{bill.total.toFixed(2)}
+                        </Typography>
+                        <Typography variant="h6" fontWeight={700} color="success.main">
+                          ₹{(bill.total * 0.9).toFixed(2)}
+                        </Typography>
+                      </Box>
                     </Box>
                   </AccordionSummary>
                   <AccordionDetails>
@@ -1065,6 +1074,36 @@ function DashboardContent() {
                         </CardContent>
                       </Card>
                     ))}
+
+                    {/* Bill Summary with Discount */}
+                    <Card variant="outlined" sx={{ mt: 2, bgcolor: 'grey.50' }}>
+                      <CardContent>
+                        <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+                          Bill Summary
+                        </Typography>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                          <Typography variant="body2">Subtotal ({bill.orders.length} order{bill.orders.length !== 1 ? 's' : ''})</Typography>
+                          <Typography variant="body2">₹{bill.total.toFixed(2)}</Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                          <Typography variant="body2" color="success.main" fontWeight={600}>
+                            App Discount (10%)
+                          </Typography>
+                          <Typography variant="body2" color="success.main" fontWeight={600}>
+                            - ₹{(bill.total * 0.1).toFixed(2)}
+                          </Typography>
+                        </Box>
+                        <Divider sx={{ my: 1 }} />
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography variant="h6" fontWeight={700}>
+                            Final Amount
+                          </Typography>
+                          <Typography variant="h6" fontWeight={700} color="primary">
+                            ₹{(bill.total * 0.9).toFixed(2)}
+                          </Typography>
+                        </Box>
+                      </CardContent>
+                    </Card>
 
                     {/* Bill Actions */}
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mt: 2 }}>

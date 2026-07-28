@@ -94,6 +94,9 @@ function SettleContent() {
   };
 
   const grandTotal = orders.reduce((sum, order) => sum + order.total, 0);
+  const discountPercent = 10;
+  const discountAmount = grandTotal * (discountPercent / 100);
+  const finalTotal = grandTotal - discountAmount;
 
   if (!tableNumber) {
     return null;
@@ -207,19 +210,37 @@ function SettleContent() {
             ))}
 
             {/* Grand Total Card */}
-            <Card sx={{ mb: 3, bgcolor: 'primary.light' }}>
+            <Card sx={{ mb: 3 }}>
               <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="h5" fontWeight={700}>
-                    Total Amount
-                  </Typography>
-                  <Typography variant="h4" fontWeight={700}>
-                    ₹{grandTotal.toFixed(2)}
-                  </Typography>
-                </Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  {orders.length} order{orders.length !== 1 ? 's' : ''} • Tax included
+                <Typography variant="h6" gutterBottom fontWeight={700}>
+                  Bill Summary
                 </Typography>
+                <Box sx={{ my: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="body1">Subtotal ({orders.length} order{orders.length !== 1 ? 's' : ''})</Typography>
+                    <Typography variant="body1">₹{grandTotal.toFixed(2)}</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="body1" color="success.main" fontWeight={600}>
+                      App Discount (10%)
+                    </Typography>
+                    <Typography variant="body1" color="success.main" fontWeight={600}>
+                      - ₹{discountAmount.toFixed(2)}
+                    </Typography>
+                  </Box>
+                  <Divider sx={{ my: 2 }} />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h5" fontWeight={700}>
+                      Final Amount
+                    </Typography>
+                    <Typography variant="h4" fontWeight={700} color="primary">
+                      ₹{finalTotal.toFixed(2)}
+                    </Typography>
+                  </Box>
+                </Box>
+                <Alert severity="success" sx={{ mt: 2 }}>
+                  You saved ₹{discountAmount.toFixed(2)} by ordering through our app!
+                </Alert>
               </CardContent>
             </Card>
 
@@ -230,7 +251,7 @@ function SettleContent() {
                   Payment Instructions
                 </Typography>
                 <Typography variant="body1" textAlign="center">
-                  Please pay the total bill amount of <strong>₹{grandTotal.toFixed(2)}</strong> at the counter
+                  Please pay the discounted amount of <strong>₹{finalTotal.toFixed(2)}</strong> at the counter
                 </Typography>
               </CardContent>
             </Card>

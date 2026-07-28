@@ -257,6 +257,9 @@ function OrderPageContent() {
             <Typography variant="h6" gutterBottom fontWeight={700}>
               Bill Summary
             </Typography>
+            <Alert severity="success" sx={{ mb: 2 }}>
+              10% discount will be applied when settling the bill
+            </Alert>
             <Box sx={{ my: 2 }}>
               <Box
                 sx={{

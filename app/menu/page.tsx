@@ -214,9 +214,21 @@ function MenuContent() {
           <Typography variant="h4" gutterBottom fontWeight={700}>
             Our Menu
           </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Choose your favorites and add them to your cart
-          </Typography>
+          <Chip
+            label="10% off on all orders placed via this app"
+            sx={{
+              bgcolor: 'success.main',
+              color: 'white',
+              fontWeight: 600,
+              fontSize: '0.95rem',
+              px: 1,
+              py: 2.5,
+              height: 'auto',
+              '& .MuiChip-label': {
+                px: 2,
+              },
+            }}
+          />
         </Box>
 
         {/* Category Tabs */}
