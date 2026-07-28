@@ -230,7 +230,6 @@ function MenuContent() {
           <Box
             sx={{
               bgcolor: 'success.main',
-              color: 'white',
               px: 2,
               py: 1.5,
               borderRadius: 1,
@@ -242,6 +241,7 @@ function MenuContent() {
               sx={{
                 fontWeight: 600,
                 fontSize: '0.95rem',
+                color: 'white',
               }}
             >
               10% off on all orders placed via this app
@@ -252,6 +252,7 @@ function MenuContent() {
                 fontStyle: 'italic',
                 display: 'block',
                 mt: 0.5,
+                color: 'white',
                 opacity: 0.9,
               }}
             >
