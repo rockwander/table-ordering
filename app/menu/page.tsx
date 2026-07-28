@@ -15,12 +15,16 @@ import {
   Tabs,
   Tab,
   IconButton,
+  TextField,
+  InputAdornment,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
 import Header from '@/components/Header';
 import { supabase } from '@/lib/supabase';
 import { Category, MenuItem } from '@/types';
@@ -39,6 +43,7 @@ function MenuContent() {
   const [outstandingTotal, setOutstandingTotal] = useState(0);
   const [buzzerSending, setBuzzerSending] = useState(false);
   const [buzzerSuccess, setBuzzerSuccess] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { cartItems, addToCart, updateQuantity, removeFromCart, getCartItemCount } = useCart();
 
@@ -107,15 +112,23 @@ function MenuContent() {
   const filteredItems =
     selectedCategory === 'all'
       ? // For "All Items", show top selling items first
-        [...menuItems].sort((a, b) => {
-          // Top selling items come first
-          if (a.is_top_selling && !b.is_top_selling) return -1;
-          if (!a.is_top_selling && b.is_top_selling) return 1;
-          // If both are top selling or both are not, maintain display_order
-          return a.display_order - b.display_order;
-        })
+        [...menuItems]
+          .filter((item) =>
+            searchQuery === '' ||
+            item.name.toLowerCase().includes(searchQuery.toLowerCase())
+          )
+          .sort((a, b) => {
+            // Top selling items come first
+            if (a.is_top_selling && !b.is_top_selling) return -1;
+            if (!a.is_top_selling && b.is_top_selling) return 1;
+            // If both are top selling or both are not, maintain display_order
+            return a.display_order - b.display_order;
+          })
       : // For specific categories, use display_order as-is
-        menuItems.filter((item) => item.category_id === selectedCategory);
+        menuItems.filter((item) =>
+          item.category_id === selectedCategory &&
+          (searchQuery === '' || item.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        );
 
   // Separate top selling items for "All Items" view
   const topSellingItems = selectedCategory === 'all'
@@ -231,11 +244,53 @@ function MenuContent() {
           />
         </Box>
 
+        {/* Search Bar */}
+        {selectedCategory === 'all' && (
+          <Box sx={{ mb: 3 }}>
+            <TextField
+              fullWidth
+              variant="outlined"
+              placeholder="Search menu items..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+                endAdornment: searchQuery && (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      onClick={() => setSearchQuery('')}
+                      edge="end"
+                    >
+                      <ClearIcon />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                bgcolor: 'background.paper',
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': {
+                    borderColor: 'primary.main',
+                  },
+                },
+              }}
+            />
+          </Box>
+        )}
+
         {/* Category Tabs */}
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
           <Tabs
             value={selectedCategory}
-            onChange={(_, value) => setSelectedCategory(value)}
+            onChange={(_, value) => {
+              setSelectedCategory(value);
+              setSearchQuery(''); // Clear search when changing tabs
+            }}
             variant="scrollable"
             scrollButtons="auto"
           >
