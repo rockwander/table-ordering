@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Component, ErrorInfo, ReactNode } from 'react';
 import {
   Box,
   Grid,
@@ -13,6 +13,8 @@ import {
   DialogContent,
   Paper,
   CircularProgress,
+  Button,
+  Alert,
 } from '@mui/material';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
@@ -46,6 +48,53 @@ interface ChartData {
   name: string;
   revenue: number;
   orders: number;
+}
+
+// Error Boundary to catch rendering errors
+class DashboardErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('Dashboard Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Box sx={{ p: 4 }}>
+          <Alert severity="error" sx={{ mb: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Dashboard Error
+            </Typography>
+            <Typography variant="body2" gutterBottom>
+              {this.state.error?.message || 'An unexpected error occurred'}
+            </Typography>
+          </Alert>
+          <Button
+            variant="contained"
+            onClick={() => {
+              this.setState({ hasError: false, error: null });
+              window.location.reload();
+            }}
+          >
+            Reload Dashboard
+          </Button>
+        </Box>
+      );
+    }
+
+    return this.props.children;
+  }
 }
 
 function FCMDebugPanel() {
@@ -521,7 +570,7 @@ function DashboardContent() {
                   Monthly Orders
                 </Typography>
               </Box>
-              <Typography variant="h4" fontWeight={700} color="info.main">
+              <Typography variant="h4" fontWeight={700} sx={{ color: 'info.main' }}>
                 {stats.monthOrders}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
@@ -689,7 +738,9 @@ export default function AdminDashboard() {
       <ProtectedRoute>
         <AdminRouteGuard requireAdmin={true}>
           <AdminLayout>
-            <DashboardContent />
+            <DashboardErrorBoundary>
+              <DashboardContent />
+            </DashboardErrorBoundary>
           </AdminLayout>
         </AdminRouteGuard>
       </ProtectedRoute>
