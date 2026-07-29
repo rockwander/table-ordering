@@ -33,12 +33,19 @@ import { playNewOrderSound, playServiceCallSound } from '@/lib/sound';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface Stats {
   todayOrders: number;
   todayRevenue: number;
   monthOrders: number;
   monthRevenue: number;
+}
+
+interface ChartData {
+  name: string;
+  revenue: number;
+  orders: number;
 }
 
 function FCMDebugPanel() {
@@ -134,6 +141,8 @@ function DashboardContent() {
     monthOrders: 0,
     monthRevenue: 0,
   });
+  const [weeklyData, setWeeklyData] = useState<ChartData[]>([]);
+  const [monthlyData, setMonthlyData] = useState<ChartData[]>([]);
 
   // Track app visibility to prevent sound replay when returning to app
   useEffect(() => {
@@ -186,6 +195,13 @@ function DashboardContent() {
       const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
       monthStart.setHours(0, 0, 0, 0);
 
+      // Get Monday of current week
+      const currentDay = today.getDay();
+      const daysFromMonday = currentDay === 0 ? 6 : currentDay - 1; // Sunday is 0, Monday is 1
+      const weekStart = new Date(today);
+      weekStart.setDate(today.getDate() - daysFromMonday);
+      weekStart.setHours(0, 0, 0, 0);
+
       // Fetch all orders
       const { data: allOrdersData, error: ordersError } = await supabase
         .from('orders')
@@ -234,6 +250,59 @@ function DashboardContent() {
         monthOrders: monthOrdersCount,
         monthRevenue,
       });
+
+      // Calculate weekly data (Monday to Sunday)
+      const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      const weeklyChartData: ChartData[] = weekDays.map((day, index) => {
+        const dayDate = new Date(weekStart);
+        dayDate.setDate(weekStart.getDate() + index);
+        const nextDay = new Date(dayDate);
+        nextDay.setDate(dayDate.getDate() + 1);
+
+        const dayOrders = allOrders.filter(order => {
+          const orderDate = new Date(order.created_at);
+          return orderDate >= dayDate && orderDate < nextDay;
+        });
+
+        const dayRevenue = dayOrders
+          .filter(o => o.status === 'paid')
+          .reduce((sum, o) => sum + o.total, 0);
+
+        return {
+          name: day,
+          revenue: dayRevenue,
+          orders: dayOrders.length,
+        };
+      });
+      setWeeklyData(weeklyChartData);
+
+      // Calculate monthly data (day by day for current month)
+      const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+      const monthlyChartData: ChartData[] = [];
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dayDate = new Date(today.getFullYear(), today.getMonth(), day);
+        dayDate.setHours(0, 0, 0, 0);
+        const nextDay = new Date(dayDate);
+        nextDay.setDate(dayDate.getDate() + 1);
+
+        const dayOrders = allOrders.filter(order => {
+          const orderDate = new Date(order.created_at);
+          return orderDate >= dayDate && orderDate < nextDay;
+        });
+
+        const dayRevenue = dayOrders
+          .filter(o => o.status === 'paid')
+          .reduce((sum, o) => sum + o.total, 0);
+
+        monthlyChartData.push({
+          name: `${day}`,
+          revenue: dayRevenue,
+          orders: dayOrders.length,
+        });
+      }
+      setMonthlyData(monthlyChartData);
+
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -464,6 +533,77 @@ function DashboardContent() {
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                 Paid orders only
               </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Sales Charts */}
+      <Grid container spacing={3} sx={{ mt: 2 }}>
+        {/* Weekly Sales Chart */}
+        <Grid item xs={12} lg={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" fontWeight={600} gutterBottom>
+                Weekly Sales (Mon - Sun)
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Current week's revenue and order count
+              </Typography>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={weeklyData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
+                  <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
+                  <Tooltip
+                    formatter={(value: number, name: string) => {
+                      if (name === 'revenue') return `₹${value.toFixed(2)}`;
+                      return value;
+                    }}
+                    labelFormatter={(label) => `${label}`}
+                  />
+                  <Legend />
+                  <Bar yAxisId="left" dataKey="revenue" fill="#8884d8" name="Revenue (₹)" />
+                  <Bar yAxisId="right" dataKey="orders" fill="#82ca9d" name="Orders" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Monthly Sales Chart */}
+        <Grid item xs={12} lg={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" fontWeight={600} gutterBottom>
+                Monthly Sales
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} - Daily breakdown
+              </Typography>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fontSize: 12 }}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis yAxisId="left" orientation="left" stroke="#ff7300" />
+                  <YAxis yAxisId="right" orientation="right" stroke="#387908" />
+                  <Tooltip
+                    formatter={(value: number, name: string) => {
+                      if (name === 'revenue') return `₹${value.toFixed(2)}`;
+                      return value;
+                    }}
+                    labelFormatter={(label) => `Day ${label}`}
+                  />
+                  <Legend />
+                  <Bar yAxisId="left" dataKey="revenue" fill="#ff7300" name="Revenue (₹)" />
+                  <Bar yAxisId="right" dataKey="orders" fill="#387908" name="Orders" />
+                </BarChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
         </Grid>
