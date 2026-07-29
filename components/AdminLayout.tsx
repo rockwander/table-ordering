@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   Box,
@@ -17,6 +17,7 @@ import {
   Divider,
   useMediaQuery,
   useTheme,
+  CircularProgress,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -30,16 +31,23 @@ import PlaylistPlayIcon from '@mui/icons-material/PlaylistPlay';
 import Logo from './Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useUserRole } from '@/hooks/useUserRole';
 
 const drawerWidth = 260;
 
-const menuItems = [
+// Admin has access to all tabs
+const adminMenuItems = [
   { label: 'Dashboard', icon: <DashboardIcon />, path: '/admin/dashboard' },
   { label: 'Live Orders', icon: <PlaylistPlayIcon />, path: '/admin/live-orders' },
   { label: 'Orders', icon: <ReceiptLongIcon />, path: '/admin/orders' },
   { label: 'Menu Management', icon: <RestaurantMenuIcon />, path: '/admin/menu' },
   { label: 'QR Codes & Tables', icon: <QrCode2Icon />, path: '/admin/tables' },
   { label: 'Settings', icon: <SettingsIcon />, path: '/admin/settings' },
+];
+
+// Executive only has access to Live Orders
+const executiveMenuItems = [
+  { label: 'Live Orders', icon: <PlaylistPlayIcon />, path: '/admin/live-orders' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -50,6 +58,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const { signOut } = useAuth();
   const { language, setLanguage } = useLanguage();
+  const { role, loading: roleLoading, isAdmin, isExecutive } = useUserRole();
+
+  // Get menu items based on role
+  const menuItems = isAdmin ? adminMenuItems : executiveMenuItems;
+
+  // Redirect executives to Live Orders if they try to access other pages
+  useEffect(() => {
+    if (!roleLoading && isExecutive && pathname && !pathname.includes('/admin/live-orders') && pathname !== '/admin/login') {
+      router.push('/admin/live-orders');
+    }
+  }, [isExecutive, pathname, router, roleLoading]);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);

@@ -43,6 +43,7 @@ import PrintIcon from '@mui/icons-material/Print';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminLayout from '@/components/AdminLayout';
+import AdminRouteGuard from '@/components/AdminRouteGuard';
 import BuzzerNotification from '@/components/BuzzerNotification';
 import { supabase } from '@/lib/supabase';
 import { Order, OrderStatus, BuzzerNotification as BuzzerNotificationType } from '@/types';
@@ -1256,9 +1257,11 @@ export default function AdminDashboard() {
   return (
     <AuthProvider>
       <ProtectedRoute>
-        <AdminLayout>
-          <DashboardContent />
-        </AdminLayout>
+        <AdminRouteGuard requireAdmin={true}>
+          <AdminLayout>
+            <DashboardContent />
+          </AdminLayout>
+        </AdminRouteGuard>
       </ProtectedRoute>
     </AuthProvider>
   );

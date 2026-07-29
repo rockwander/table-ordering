@@ -28,6 +28,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminLayout from '@/components/AdminLayout';
+import AdminRouteGuard from '@/components/AdminRouteGuard';
 import { supabase } from '@/lib/supabase';
 import { Table } from '@/types';
 import QRCode from 'qrcode';
@@ -413,9 +414,11 @@ export default function AdminTables() {
   return (
     <AuthProvider>
       <ProtectedRoute>
-        <AdminLayout>
-          <TablesContent />
-        </AdminLayout>
+        <AdminRouteGuard requireAdmin={true}>
+          <AdminLayout>
+            <TablesContent />
+          </AdminLayout>
+        </AdminRouteGuard>
       </ProtectedRoute>
     </AuthProvider>
   );

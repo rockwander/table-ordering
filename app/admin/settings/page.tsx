@@ -16,6 +16,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminLayout from '@/components/AdminLayout';
+import AdminRouteGuard from '@/components/AdminRouteGuard';
 import { supabase } from '@/lib/supabase';
 import { RestaurantSettings } from '@/types';
 
@@ -209,9 +210,11 @@ export default function AdminSettings() {
   return (
     <AuthProvider>
       <ProtectedRoute>
-        <AdminLayout>
-          <SettingsContent />
-        </AdminLayout>
+        <AdminRouteGuard requireAdmin={true}>
+          <AdminLayout>
+            <SettingsContent />
+          </AdminLayout>
+        </AdminRouteGuard>
       </ProtectedRoute>
     </AuthProvider>
   );

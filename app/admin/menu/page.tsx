@@ -42,6 +42,7 @@ import ImageIcon from '@mui/icons-material/Image';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminLayout from '@/components/AdminLayout';
+import AdminRouteGuard from '@/components/AdminRouteGuard';
 import { supabase } from '@/lib/supabase';
 import { Category, MenuItem as MenuItemType } from '@/types';
 import {
@@ -995,9 +996,11 @@ export default function AdminMenu() {
   return (
     <AuthProvider>
       <ProtectedRoute>
-        <AdminLayout>
-          <MenuContent />
-        </AdminLayout>
+        <AdminRouteGuard requireAdmin={true}>
+          <AdminLayout>
+            <MenuContent />
+          </AdminLayout>
+        </AdminRouteGuard>
       </ProtectedRoute>
     </AuthProvider>
   );

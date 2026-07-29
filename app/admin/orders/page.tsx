@@ -33,6 +33,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminLayout from '@/components/AdminLayout';
+import AdminRouteGuard from '@/components/AdminRouteGuard';
 import { supabase } from '@/lib/supabase';
 import { Order, OrderStatus } from '@/types';
 import { useRouter } from 'next/navigation';
@@ -440,9 +441,11 @@ export default function AdminOrders() {
   return (
     <AuthProvider>
       <ProtectedRoute>
-        <AdminLayout>
-          <OrdersContent />
-        </AdminLayout>
+        <AdminRouteGuard requireAdmin={true}>
+          <AdminLayout>
+            <OrdersContent />
+          </AdminLayout>
+        </AdminRouteGuard>
       </ProtectedRoute>
     </AuthProvider>
   );
