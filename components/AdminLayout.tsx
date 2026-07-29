@@ -172,7 +172,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </IconButton>
           <Logo size="small" showText={true} />
           <Box sx={{ flexGrow: 1 }} />
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
             <Button
               size="small"
               variant={language === 'en' ? 'contained' : 'outlined'}
@@ -198,6 +198,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             >
               ગુજરાતી
             </Button>
+            <IconButton
+              onClick={handleSignOut}
+              size="small"
+              sx={{
+                ml: 1,
+                color: 'error.main',
+                border: '1px solid',
+                borderColor: 'error.light',
+                '&:hover': {
+                  bgcolor: 'error.50',
+                  borderColor: 'error.main',
+                },
+              }}
+              title="Sign Out"
+            >
+              <LogoutIcon fontSize="small" />
+            </IconButton>
           </Box>
         </Toolbar>
       </AppBar>

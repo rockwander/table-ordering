@@ -501,7 +501,7 @@ function DashboardContent() {
                   Today's Revenue
                 </Typography>
               </Box>
-              <Typography variant="h4" fontWeight={700} color="success.main">
+              <Typography variant="h4" fontWeight={700} sx={{ color: 'success.main' }}>
                 ₹{stats.todayRevenue.toFixed(2)}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
@@ -541,7 +541,7 @@ function DashboardContent() {
                   Monthly Revenue
                 </Typography>
               </Box>
-              <Typography variant="h4" fontWeight={700} color="warning.main">
+              <Typography variant="h4" fontWeight={700} sx={{ color: 'warning.main' }}>
                 ₹{stats.monthRevenue.toFixed(2)}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
