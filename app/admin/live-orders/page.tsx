@@ -295,21 +295,26 @@ function LiveOrdersContent() {
 
   const fetchBills = async () => {
     try {
-      // Fetch all orders with items
+      // Fetch only recent orders (last 7 days) for better performance
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select(`
           *,
           order_items (*)
         `)
+        .gte('created_at', sevenDaysAgo.toISOString())
         .order('created_at', { ascending: false });
 
       if (ordersError) throw ordersError;
 
-      // Fetch all settled bills from the bills table
+      // Fetch only recent settled bills (last 7 days) for better performance
       const { data: settledBillsData, error: billsError } = await supabase
         .from('bills')
         .select('*')
+        .gte('created_at', sevenDaysAgo.toISOString())
         .order('settled_at', { ascending: false });
 
       if (billsError) throw billsError;
