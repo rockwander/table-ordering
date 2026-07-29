@@ -136,18 +136,24 @@ function LiveOrdersContent() {
 
       if (ordersError) throw ordersError;
 
-      // Group orders by table_number to create bills
+      // Group orders into bills based on table and payment status
+      // Strategy: Orders are grouped by table. Once settled (paid), they form a completed bill.
+      // New orders after settlement create a NEW bill for that table.
+
+      // First, separate paid and unpaid orders
+      const paidOrders = ordersData?.filter((o: any) => o.status === 'paid') || [];
+      const unpaidOrders = ordersData?.filter((o: any) => o.status !== 'paid') || [];
+
       const billsMap = new Map<string, Bill>();
 
-      ordersData?.forEach((order: any) => {
-        const key = `${order.table_number}`;
+      // Process unpaid orders - group by table (these are active bills)
+      unpaidOrders.forEach((order: any) => {
+        const key = `${order.table_number}-active`;
 
         if (!billsMap.has(key)) {
-          // Generate bill ID based on table and first order time
-          const billId = `${order.table_number}-${new Date(order.created_at).getTime()}`;
           billsMap.set(key, {
-            bill_id: billId,
-            display_bill_id: 0, // Will be set properly later
+            bill_id: `active-${order.table_number}-${Date.now()}`,
+            display_bill_id: 0,
             table_number: order.table_number,
             orders: [],
             total: 0,
@@ -158,6 +164,48 @@ function LiveOrdersContent() {
         const bill = billsMap.get(key)!;
         bill.orders.push(order);
         bill.total += order.total;
+      });
+
+      // Process paid orders - group by table and settlement session
+      // Orders settled together (same updated_at time within 1 minute) form one bill
+      const paidByTable = new Map<string, any[]>();
+      paidOrders.forEach((order: any) => {
+        const tableKey = order.table_number;
+        if (!paidByTable.has(tableKey)) {
+          paidByTable.set(tableKey, []);
+        }
+        paidByTable.get(tableKey)!.push(order);
+      });
+
+      // For each table, group paid orders into billing sessions
+      paidByTable.forEach((orders, tableNumber) => {
+        // Sort by updated_at (when they were marked as paid)
+        orders.sort((a, b) => new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime());
+
+        let currentBill: Bill | null = null;
+        let lastPaidTime: number | null = null;
+
+        orders.forEach((order) => {
+          const paidTime = new Date(order.updated_at).getTime();
+
+          // If more than 1 minute gap, start a new bill (new settlement session)
+          if (!currentBill || !lastPaidTime || (paidTime - lastPaidTime) > 60000) {
+            const billKey = `${tableNumber}-paid-${paidTime}`;
+            currentBill = {
+              bill_id: billKey,
+              display_bill_id: 0,
+              table_number: tableNumber,
+              orders: [],
+              total: 0,
+              created_at: order.created_at,
+            };
+            billsMap.set(billKey, currentBill);
+          }
+
+          currentBill!.orders.push(order);
+          currentBill!.total += order.total;
+          lastPaidTime = paidTime;
+        });
       });
 
       // Convert map to array and assign sequential bill IDs
