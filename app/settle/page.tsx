@@ -127,6 +127,11 @@ function SettleContent() {
           <Typography variant="h4" fontWeight={700} gutterBottom>
             Settle Bill - Table {tableNumber}
           </Typography>
+          <Chip
+            label={`Bill #${String(Math.floor(Math.random() * 999) + 1).padStart(3, '0')}`}
+            color="secondary"
+            sx={{ mb: 2, fontWeight: 700, fontSize: '1rem', px: 2, py: 3, height: 'auto' }}
+          />
           <Typography variant="body1" color="text.secondary">
             Review all orders before settling
           </Typography>

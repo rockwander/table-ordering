@@ -26,6 +26,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import QrCode2Icon from '@mui/icons-material/QrCode2';
 import TranslateIcon from '@mui/icons-material/Translate';
+import PlaylistPlayIcon from '@mui/icons-material/PlaylistPlay';
 import Logo from './Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -34,6 +35,7 @@ const drawerWidth = 260;
 
 const menuItems = [
   { label: 'Dashboard', icon: <DashboardIcon />, path: '/admin/dashboard' },
+  { label: 'Live Orders', icon: <PlaylistPlayIcon />, path: '/admin/live-orders' },
   { label: 'Orders', icon: <ReceiptLongIcon />, path: '/admin/orders' },
   { label: 'Menu Management', icon: <RestaurantMenuIcon />, path: '/admin/menu' },
   { label: 'QR Codes & Tables', icon: <QrCode2Icon />, path: '/admin/tables' },

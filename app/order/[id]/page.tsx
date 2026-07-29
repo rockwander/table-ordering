@@ -181,6 +181,12 @@ function OrderPageContent() {
               <Typography variant="body2" color="text.secondary">
                 Order #{orderId.slice(0, 8)}
               </Typography>
+              <Chip
+                label={`Bill #${String(Math.floor(Math.random() * 999) + 1).padStart(3, '0')}`}
+                size="small"
+                color="secondary"
+                sx={{ mt: 1, fontWeight: 600 }}
+              />
             </Box>
             <Chip
               label={statusLabels[order.status]}
