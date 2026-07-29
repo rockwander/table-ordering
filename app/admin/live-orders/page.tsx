@@ -67,7 +67,6 @@ interface OrderWithItems extends Order {
     quantity: number;
     special_instructions: string | null;
   }>;
-  bill_id?: string | null;
   orderNumber?: number;
 }
 
