@@ -174,14 +174,18 @@ function LiveOrdersContent() {
           schema: 'public',
           table: 'orders',
         },
-        async (payload) => {
+        (payload) => {
           const order = payload.new as any;
           console.log('🆕 New order detected:', order);
 
+          // Immediately refresh bills for instant UI update
+          fetchBills();
+
+          // Play sound and notifications in parallel (non-blocking)
           // Only play sound if app is active AND we haven't processed this order yet
           if (isAppActiveRef.current && !processedOrderIdsRef.current.has(order.id)) {
             console.log('🔊 Playing sound for new order (app is active)');
-            await playNewOrderSound();
+            playNewOrderSound().catch(err => console.error('Sound error:', err));
             setProcessedOrderIds(prev => new Set(prev).add(order.id));
           } else if (!isAppActiveRef.current) {
             console.log('🔇 App is in background, skipping sound');
@@ -191,9 +195,9 @@ function LiveOrdersContent() {
             console.log('🔇 Order already processed, skipping sound');
           }
 
-          // Always show notification (OS handles this)
+          // Always show notification (OS handles this) - non-blocking
           if (notificationsEnabledRef.current) {
-            await showLocalNotification('🍽️ New Order!', {
+            showLocalNotification('🍽️ New Order!', {
               body: `Table ${order.table_number} placed a new order`,
               tag: `order-${order.id}`,
               requireInteraction: true,
@@ -202,11 +206,8 @@ function LiveOrdersContent() {
                 order_id: order.id,
                 url: '/admin/live-orders'
               }
-            });
+            }).catch(err => console.error('Notification error:', err));
           }
-
-          // Refresh bills
-          fetchBills();
         }
       )
       .on(
@@ -233,24 +234,26 @@ function LiveOrdersContent() {
           schema: 'public',
           table: 'buzzer_notifications',
         },
-        async (payload) => {
+        (payload) => {
           console.log('🔔 Buzzer notification received:', payload);
           const newNotification = payload.new as BuzzerNotificationType;
           if (newNotification.status === 'active') {
             console.log('✅ Adding notification toast for table:', newNotification.table_number);
+
+            // Immediately update UI
             setActiveNotifications((prev) => [...prev, newNotification]);
 
-            // Play notification sound
-            await playServiceCallSound();
+            // Play notification sound (non-blocking)
+            playServiceCallSound().catch(err => console.error('Sound error:', err));
 
-            // Show web push notification (works even when screen is off)
+            // Show web push notification (works even when screen is off) - non-blocking
             if (notificationsEnabledRef.current) {
               const title = newNotification.notification_type === 'service_call'
                 ? '🔔 Service Request!'
                 : '🍽️ New Order!';
               const body = `Table ${newNotification.table_number} needs assistance`;
 
-              await showLocalNotification(title, {
+              showLocalNotification(title, {
                 body,
                 tag: `buzzer-${newNotification.id}`,
                 data: {
@@ -258,8 +261,8 @@ function LiveOrdersContent() {
                   notification_type: newNotification.notification_type,
                   url: '/admin/live-orders'
                 }
-              });
-              console.log('📱 Push notification sent');
+              }).then(() => console.log('📱 Push notification sent'))
+                .catch(err => console.error('Notification error:', err));
             }
           }
         }
