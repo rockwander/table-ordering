@@ -326,14 +326,25 @@ function DashboardContent() {
   };
 
   useEffect(() => {
-    fetchDashboardData();
+    // Set a timeout to force loading to false if data fetch takes too long
+    const loadingTimeout = setTimeout(() => {
+      console.warn('Dashboard loading timeout - forcing loading to false');
+      setLoading(false);
+    }, 10000); // 10 second timeout
+
+    fetchDashboardData().finally(() => {
+      clearTimeout(loadingTimeout);
+    });
     fetchActiveBuzzerNotifications();
 
     const interval = setInterval(() => {
       fetchDashboardData();
     }, 30000); // Refresh every 30 seconds
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      clearTimeout(loadingTimeout);
+    };
   }, []);
 
   // Real-time subscriptions for notifications and sounds
@@ -415,8 +426,11 @@ function DashboardContent() {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '50vh', gap: 2 }}>
         <CircularProgress />
+        <Typography variant="body2" color="text.secondary">
+          Loading dashboard...
+        </Typography>
       </Box>
     );
   }
@@ -550,8 +564,9 @@ function DashboardContent() {
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                 Current week's revenue and order count
               </Typography>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={weeklyData}>
+              {weeklyData && weeklyData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={weeklyData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
                   <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
@@ -568,6 +583,13 @@ function DashboardContent() {
                   <Bar yAxisId="right" dataKey="orders" fill="#82ca9d" name="Orders" />
                 </BarChart>
               </ResponsiveContainer>
+              ) : (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Loading chart data...
+                  </Typography>
+                </Box>
+              )}
             </CardContent>
           </Card>
         </Grid>
@@ -582,8 +604,9 @@ function DashboardContent() {
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                 {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} - Daily breakdown
               </Typography>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={monthlyData}>
+              {monthlyData && monthlyData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={monthlyData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis
                     dataKey="name"
@@ -604,6 +627,13 @@ function DashboardContent() {
                   <Bar yAxisId="right" dataKey="orders" fill="#387908" name="Orders" />
                 </BarChart>
               </ResponsiveContainer>
+              ) : (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Loading chart data...
+                  </Typography>
+                </Box>
+              )}
             </CardContent>
           </Card>
         </Grid>
