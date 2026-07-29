@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Box,
   Card,
@@ -94,6 +94,23 @@ function LiveOrdersContent() {
   const [processedOrderIds, setProcessedOrderIds] = useState<Set<string>>(new Set());
   const [isAppActive, setIsAppActive] = useState(true);
   const [activeNotifications, setActiveNotifications] = useState<BuzzerNotificationType[]>([]);
+
+  // Use refs to avoid stale closures in real-time subscriptions
+  const isAppActiveRef = useRef(isAppActive);
+  const processedOrderIdsRef = useRef(processedOrderIds);
+  const notificationsEnabledRef = useRef(notificationsEnabled);
+
+  useEffect(() => {
+    isAppActiveRef.current = isAppActive;
+  }, [isAppActive]);
+
+  useEffect(() => {
+    processedOrderIdsRef.current = processedOrderIds;
+  }, [processedOrderIds]);
+
+  useEffect(() => {
+    notificationsEnabledRef.current = notificationsEnabled;
+  }, [notificationsEnabled]);
   const { language, t } = useLanguage();
 
   // Helper function to get item name in current language
@@ -162,11 +179,11 @@ function LiveOrdersContent() {
           console.log('🆕 New order detected:', order);
 
           // Only play sound if app is active AND we haven't processed this order yet
-          if (isAppActive && !processedOrderIds.has(order.id)) {
+          if (isAppActiveRef.current && !processedOrderIdsRef.current.has(order.id)) {
             console.log('🔊 Playing sound for new order (app is active)');
             await playNewOrderSound();
             setProcessedOrderIds(prev => new Set(prev).add(order.id));
-          } else if (!isAppActive) {
+          } else if (!isAppActiveRef.current) {
             console.log('🔇 App is in background, skipping sound');
             // Mark as processed so sound doesn't play when returning
             setProcessedOrderIds(prev => new Set(prev).add(order.id));
@@ -175,7 +192,7 @@ function LiveOrdersContent() {
           }
 
           // Always show notification (OS handles this)
-          if (notificationsEnabled) {
+          if (notificationsEnabledRef.current) {
             await showLocalNotification('🍽️ New Order!', {
               body: `Table ${order.table_number} placed a new order`,
               tag: `order-${order.id}`,
@@ -227,7 +244,7 @@ function LiveOrdersContent() {
             await playServiceCallSound();
 
             // Show web push notification (works even when screen is off)
-            if (notificationsEnabled) {
+            if (notificationsEnabledRef.current) {
               const title = newNotification.notification_type === 'service_call'
                 ? '🔔 Service Request!'
                 : '🍽️ New Order!';
@@ -271,7 +288,7 @@ function LiveOrdersContent() {
       supabase.removeChannel(buzzerChannel);
       clearInterval(interval);
     };
-  }, [notificationsEnabled]);
+  }, []); // Empty dependency array - subscriptions use refs to avoid stale closures
 
   const fetchBills = async () => {
     try {
