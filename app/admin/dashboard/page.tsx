@@ -90,6 +90,7 @@ interface OrderWithItems extends Order {
 
 interface Bill {
   bill_id: string;
+  display_bill_id?: number;
   table_number: string;
   orders: OrderWithItems[];
   total: number;

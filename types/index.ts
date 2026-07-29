@@ -56,6 +56,7 @@ export type Bill = {
   table_number: string;
   subtotal: number;
   total: number;
+  display_bill_id?: number;
   settled_at: string;
   created_at: string;
   updated_at: string;
