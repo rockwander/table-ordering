@@ -32,12 +32,13 @@ import PrintIcon from '@mui/icons-material/Print';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminLayout from '@/components/AdminLayout';
+import BuzzerNotification from '@/components/BuzzerNotification';
 import { supabase } from '@/lib/supabase';
-import { Order, OrderStatus } from '@/types';
+import { Order, OrderStatus, BuzzerNotification as BuzzerNotificationType } from '@/types';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { initializeNotifications, showLocalNotification, checkNotificationSupport } from '@/lib/notifications';
 import { initializePushNotifications } from '@/lib/fcm-notifications';
-import { playNewOrderSound } from '@/lib/sound';
+import { playNewOrderSound, playServiceCallSound } from '@/lib/sound';
 import { Capacitor } from '@capacitor/core';
 
 const statusLabels: Record<OrderStatus, string> = {
@@ -92,6 +93,7 @@ function LiveOrdersContent() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [processedOrderIds, setProcessedOrderIds] = useState<Set<string>>(new Set());
   const [isAppActive, setIsAppActive] = useState(true);
+  const [activeNotifications, setActiveNotifications] = useState<BuzzerNotificationType[]>([]);
   const { language, t } = useLanguage();
 
   // Helper function to get item name in current language
@@ -143,9 +145,10 @@ function LiveOrdersContent() {
 
   useEffect(() => {
     fetchBills();
+    fetchActiveBuzzerNotifications();
 
-    // Set up real-time subscription
-    const channel = supabase
+    // Set up real-time subscription for orders
+    const ordersChannel = supabase
       .channel('live-orders-updates')
       .on(
         'postgres_changes',
@@ -202,11 +205,70 @@ function LiveOrdersContent() {
       )
       .subscribe();
 
+    // Subscribe to real-time buzzer notifications
+    console.log('🔔 Setting up buzzer notifications channel...');
+    const buzzerChannel = supabase
+      .channel('live-orders-buzzer')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'buzzer_notifications',
+        },
+        async (payload) => {
+          console.log('🔔 Buzzer notification received:', payload);
+          const newNotification = payload.new as BuzzerNotificationType;
+          if (newNotification.status === 'active') {
+            console.log('✅ Adding notification toast for table:', newNotification.table_number);
+            setActiveNotifications((prev) => [...prev, newNotification]);
+
+            // Play notification sound
+            await playServiceCallSound();
+
+            // Show web push notification (works even when screen is off)
+            if (notificationsEnabled) {
+              const title = newNotification.notification_type === 'service_call'
+                ? '🔔 Service Request!'
+                : '🍽️ New Order!';
+              const body = `Table ${newNotification.table_number} needs assistance`;
+
+              await showLocalNotification(title, {
+                body,
+                tag: `buzzer-${newNotification.id}`,
+                data: {
+                  table_number: newNotification.table_number,
+                  notification_type: newNotification.notification_type,
+                  url: '/admin/live-orders'
+                }
+              });
+              console.log('📱 Push notification sent');
+            }
+          }
+        }
+      )
+      .subscribe((status, err) => {
+        console.log('📡 Buzzer channel status:', status);
+        if (err) {
+          console.error('❌ Buzzer channel error:', err);
+        }
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Successfully subscribed to buzzer notifications');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Channel error - check if table exists and real-time is enabled');
+        } else if (status === 'TIMED_OUT') {
+          console.error('❌ Subscription timed out');
+        } else if (status === 'CLOSED') {
+          console.error('❌ Channel closed');
+        }
+      });
+
     // Refresh every 30 seconds as backup
     const interval = setInterval(fetchBills, 30000);
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(ordersChannel);
+      supabase.removeChannel(buzzerChannel);
       clearInterval(interval);
     };
   }, [notificationsEnabled]);
@@ -224,6 +286,14 @@ function LiveOrdersContent() {
 
       if (ordersError) throw ordersError;
 
+      // Fetch all settled bills from the bills table
+      const { data: settledBillsData, error: billsError } = await supabase
+        .from('bills')
+        .select('*')
+        .order('settled_at', { ascending: false });
+
+      if (billsError) throw billsError;
+
       // Group orders into bills based on table and payment status
       // Strategy: Orders are grouped by table. Once settled (paid), they form a completed bill.
       // New orders after settlement create a NEW bill for that table.
@@ -234,14 +304,14 @@ function LiveOrdersContent() {
 
       const billsMap = new Map<string, Bill>();
 
-      // Process unpaid orders - group by table (these are active bills)
+      // Process unpaid orders - group by table (these are DRAFT bills, no bill_id yet)
       unpaidOrders.forEach((order: any) => {
         const key = `${order.table_number}-active`;
 
         if (!billsMap.has(key)) {
           billsMap.set(key, {
-            bill_id: `active-${order.table_number}-${Date.now()}`,
-            display_bill_id: 0,
+            bill_id: `draft-${order.table_number}`,
+            display_bill_id: 0, // 0 means draft/unsettled
             table_number: order.table_number,
             orders: [],
             total: 0,
@@ -254,65 +324,63 @@ function LiveOrdersContent() {
         bill.total += order.total;
       });
 
-      // Process paid orders - group by table and settlement session
-      // Orders settled together (same updated_at time within 1 minute) form one bill
-      const paidByTable = new Map<string, any[]>();
+      // Process paid orders - use the actual bills from the database
+      const billRecordsMap = new Map<string, any>();
+      settledBillsData?.forEach((billRecord) => {
+        billRecordsMap.set(billRecord.id, billRecord);
+      });
+
+      // Group paid orders by their bill_id
+      const ordersByBillId = new Map<string, any[]>();
       paidOrders.forEach((order: any) => {
-        const tableKey = order.table_number;
-        if (!paidByTable.has(tableKey)) {
-          paidByTable.set(tableKey, []);
-        }
-        paidByTable.get(tableKey)!.push(order);
-      });
-
-      // For each table, group paid orders into billing sessions
-      paidByTable.forEach((orders, tableNumber) => {
-        // Sort by updated_at (when they were marked as paid)
-        orders.sort((a, b) => new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime());
-
-        let currentBill: Bill | null = null;
-        let lastPaidTime: number | null = null;
-
-        orders.forEach((order) => {
-          const paidTime = new Date(order.updated_at).getTime();
-
-          // If more than 1 minute gap, start a new bill (new settlement session)
-          if (!currentBill || !lastPaidTime || (paidTime - lastPaidTime) > 60000) {
-            const billKey = `${tableNumber}-paid-${paidTime}`;
-            currentBill = {
-              bill_id: billKey,
-              display_bill_id: 0,
-              table_number: tableNumber,
-              orders: [],
-              total: 0,
-              created_at: order.created_at,
-            };
-            billsMap.set(billKey, currentBill);
+        if (order.bill_id) {
+          if (!ordersByBillId.has(order.bill_id)) {
+            ordersByBillId.set(order.bill_id, []);
           }
-
-          currentBill!.orders.push(order);
-          currentBill!.total += order.total;
-          lastPaidTime = paidTime;
-        });
+          ordersByBillId.get(order.bill_id)!.push(order);
+        }
       });
 
-      // Convert map to array and assign sequential bill IDs
+      // Create bill objects from database records
+      ordersByBillId.forEach((orders, billId) => {
+        const billRecord = billRecordsMap.get(billId);
+        if (billRecord) {
+          billsMap.set(billId, {
+            bill_id: billId,
+            display_bill_id: billRecord.display_bill_id || 0,
+            table_number: billRecord.table_number,
+            orders: orders,
+            total: billRecord.total,
+            created_at: billRecord.created_at,
+            settled_at: billRecord.settled_at,
+          });
+        }
+      });
+
+      // Convert map to array
       const billsArray = Array.from(billsMap.values());
 
       // Sort by created_at (newest first)
-      billsArray.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      billsArray.sort((a, b) => {
+        const aTime = new Date(a.settled_at || a.created_at).getTime();
+        const bTime = new Date(b.settled_at || b.created_at).getTime();
+        return bTime - aTime;
+      });
 
-      // Assign sequential bill IDs (cycling from 1-999)
-      billsArray.forEach((bill, index) => {
-        bill.display_bill_id = ((index % 999) + 1);
+      // Assign order numbers within each bill
+      billsArray.forEach((bill) => {
+        // Sort orders within bill by created_at (oldest first for order numbering)
+        const sortedOrders = [...bill.orders].sort(
+          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
 
-        // Sort orders within bill by created_at (newest first)
-        bill.orders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
-        // Assign order numbers within bill
-        bill.orders.forEach((order, orderIndex) => {
-          order.orderNumber = orderIndex + 1;
+        // Assign order numbers
+        sortedOrders.forEach((order, index) => {
+          order.orderNumber = index + 1;
         });
+
+        // Then reverse for display (newest first)
+        bill.orders = sortedOrders.reverse();
       });
 
       setBills(billsArray);
@@ -320,6 +388,64 @@ function LiveOrdersContent() {
       console.error('Error fetching bills:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchActiveBuzzerNotifications = async () => {
+    try {
+      console.log('🔍 Fetching active buzzer notifications...');
+      const { data, error } = await supabase
+        .from('buzzer_notifications')
+        .select('*')
+        .eq('status', 'active')
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        console.log(`✅ Found ${data.length} active notifications`);
+        setActiveNotifications(data);
+      } else {
+        console.log('📭 No active notifications');
+      }
+    } catch (error) {
+      console.error('❌ Error fetching active buzzer notifications:', error);
+    }
+  };
+
+  const handleDismissNotification = async (notificationId: string) => {
+    try {
+      console.log('🗑️ Dismissing notification:', notificationId);
+      await supabase
+        .from('buzzer_notifications')
+        .update({ status: 'dismissed', dismissed_at: new Date().toISOString() })
+        .eq('id', notificationId);
+
+      // Remove from local state
+      setActiveNotifications((prev) =>
+        prev.filter((notification) => notification.id !== notificationId)
+      );
+    } catch (error) {
+      console.error('❌ Error dismissing notification:', error);
+    }
+  };
+
+  const handleDismissAllNotifications = async () => {
+    try {
+      console.log('🗑️ Dismissing all notifications');
+      if (activeNotifications.length === 0) return;
+
+      const ids = activeNotifications.map(n => n.id);
+
+      await supabase
+        .from('buzzer_notifications')
+        .update({ status: 'dismissed', dismissed_at: new Date().toISOString() })
+        .in('id', ids);
+
+      // Clear all from local state
+      setActiveNotifications([]);
+    } catch (error) {
+      console.error('❌ Error dismissing all notifications:', error);
     }
   };
 
@@ -342,20 +468,54 @@ function LiveOrdersContent() {
   };
 
   const handleSettleBill = async (bill: Bill) => {
-    if (!confirm(`Settle bill #${String(bill.display_bill_id).padStart(3, '0')} for Table ${bill.table_number}?`)) {
+    const displayBillText = bill.display_bill_id > 0
+      ? `#${String(bill.display_bill_id).padStart(3, '0')}`
+      : '(Draft)';
+
+    if (!confirm(`Settle bill ${displayBillText} for Table ${bill.table_number}?`)) {
       return;
     }
 
     setSettlingBill(bill.bill_id);
     try {
       const orderIds = bill.orders.map(order => order.id);
+      const settlementTime = new Date().toISOString();
 
-      const { error } = await supabase
+      // Calculate bill totals
+      const billSubtotal = bill.orders.reduce((sum, order) => sum + order.subtotal, 0);
+      const billTotal = bill.orders.reduce((sum, order) => sum + order.total, 0);
+
+      // Generate bill number (format: BILL-YYYYMMDD-HHMMSS)
+      const now = new Date();
+      const billNumber = `BILL-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+
+      // Create bill record (display_bill_id will be auto-generated by the sequence)
+      const { data: billRecord, error: billError } = await supabase
+        .from('bills')
+        .insert({
+          bill_number: billNumber,
+          table_number: bill.table_number,
+          subtotal: billSubtotal,
+          total: billTotal,
+          settled_at: settlementTime,
+        })
+        .select()
+        .single();
+
+      if (billError) throw billError;
+
+      // Update orders with bill_id and mark as paid
+      const { error: ordersError } = await supabase
         .from('orders')
-        .update({ status: 'paid', updated_at: new Date().toISOString() })
+        .update({
+          status: 'paid',
+          bill_id: billRecord.id,
+          updated_at: settlementTime
+        })
         .in('id', orderIds);
 
-      if (error) throw error;
+      if (ordersError) throw ordersError;
+
       await fetchBills();
     } catch (error) {
       console.error('Error settling bill:', error);
@@ -394,11 +554,15 @@ function LiveOrdersContent() {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
+    const billTitle = bill.display_bill_id > 0
+      ? `Bill #${String(bill.display_bill_id).padStart(3, '0')}`
+      : 'Bill (Draft)';
+
     const billHTML = `
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Bill #${String(bill.display_bill_id).padStart(3, '0')} - Table ${bill.table_number}</title>
+        <title>${billTitle} - Table ${bill.table_number}</title>
         <style>
           body { font-family: Arial, sans-serif; padding: 20px; }
           h1 { text-align: center; color: #D4691A; }
@@ -416,7 +580,7 @@ function LiveOrdersContent() {
       </head>
       <body>
         <h1>Ramani's Cafe</h1>
-        <p style="text-align: center;">Bill #${String(bill.display_bill_id).padStart(3, '0')}</p>
+        <p style="text-align: center;">${billTitle}</p>
         <p><strong>Table:</strong> ${bill.table_number}</p>
         <p><strong>Date:</strong> ${new Date(bill.created_at).toLocaleString()}</p>
 
@@ -516,7 +680,29 @@ function LiveOrdersContent() {
   }
 
   return (
-    <Box>
+    <Box onClick={activeNotifications.length > 0 ? handleDismissAllNotifications : undefined}>
+      {/* Toast Notifications - Stacked */}
+      {activeNotifications.length > 0 && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 80,
+            right: 24,
+            zIndex: 2000,
+            maxWidth: 320,
+          }}
+        >
+          {activeNotifications.map((notification) => (
+            <BuzzerNotification
+              key={notification.id}
+              tableNumber={notification.table_number}
+              notificationType={notification.notification_type || 'service_call'}
+              onDismiss={() => handleDismissNotification(notification.id)}
+            />
+          ))}
+        </Box>
+      )}
+
       <Box sx={{ mb: 3 }}>
         <Typography variant="h4" fontWeight={700} gutterBottom>
           {t('liveOrders.title')}
@@ -552,8 +738,8 @@ function LiveOrdersContent() {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', pr: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Chip
-                      label={`Bill #${String(bill.display_bill_id).padStart(3, '0')}`}
-                      color="secondary"
+                      label={bill.display_bill_id > 0 ? `Bill #${String(bill.display_bill_id).padStart(3, '0')}` : 'Draft'}
+                      color={bill.display_bill_id > 0 ? 'secondary' : 'default'}
                       sx={{ fontWeight: 700 }}
                     />
                     <Chip label={`Table ${bill.table_number}`} color="primary" />

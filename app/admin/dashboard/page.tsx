@@ -559,6 +559,7 @@ function DashboardContent() {
   };
 
   const groupOrdersIntoBills = (): Bill[] => {
+    // Note: This function should be called after fetchDashboardData which populates the orders array
     let filteredOrders = orders.filter(order =>
       viewTab === 'unsettled' ? order.status !== 'paid' : order.status === 'paid'
     );
@@ -572,8 +573,10 @@ function DashboardContent() {
       );
     }
 
+    const billsMap = new Map<string, Bill>();
+
     if (viewTab === 'unsettled') {
-      // For unsettled: show ALL pending orders (group by table)
+      // For unsettled: show ALL pending orders (group by table) - DRAFT bills
       const grouped = filteredOrders.reduce((acc, order) => {
         const tableNum = order.table_number;
         if (!acc[tableNum]) {
@@ -583,7 +586,7 @@ function DashboardContent() {
         return acc;
       }, {} as Record<string, OrderWithItems[]>);
 
-      return Object.entries(grouped).map(([tableNum, orders]) => {
+      Object.entries(grouped).forEach(([tableNum, orders]) => {
         // First sort by creation time to assign proper order numbers (oldest = #1)
         const ordersWithNumbers = orders
           .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
@@ -595,53 +598,58 @@ function DashboardContent() {
         // Then reverse for display (most recent first)
         const sortedOrders = [...ordersWithNumbers].reverse();
 
-        return {
-          bill_id: `table-${tableNum}-active`,
+        billsMap.set(`draft-${tableNum}`, {
+          bill_id: `draft-${tableNum}`,
+          display_bill_id: 0, // 0 means draft
           table_number: tableNum,
           orders: sortedOrders,
           total: orders.reduce((sum, order) => sum + order.total, 0),
           // Track most recent order time for bill sorting
           most_recent_order: sortedOrders[0].created_at,
-        };
-      }).sort((a, b) => {
+        });
+      });
+
+      return Array.from(billsMap.values()).sort((a, b) => {
         // Sort bills by most recent order first
-        return new Date(b.most_recent_order).getTime() - new Date(a.most_recent_order).getTime();
+        return new Date(b.most_recent_order || 0).getTime() - new Date(a.most_recent_order || 0).getTime();
       });
     } else {
-      // For settled: group by table + settlement time (orders settled together = one bill)
-      const grouped = filteredOrders.reduce((acc, order) => {
-        const tableNum = order.table_number;
-        const settledTime = new Date(order.updated_at).toISOString().slice(0, 19); // Group by second
-        const billKey = `${tableNum}-${settledTime}`;
-
-        if (!acc[billKey]) {
-          acc[billKey] = {
-            table_number: tableNum,
-            orders: [],
-            settled_at: order.updated_at,
-          };
+      // For settled: use actual bill records from database (populated by fetchDashboardData)
+      // Group paid orders by their bill_id
+      const ordersByBillId = new Map<string, OrderWithItems[]>();
+      filteredOrders.forEach((order) => {
+        if (order.bill_id) {
+          if (!ordersByBillId.has(order.bill_id)) {
+            ordersByBillId.set(order.bill_id, []);
+          }
+          ordersByBillId.get(order.bill_id)!.push(order);
         }
-        acc[billKey].orders.push(order);
-        return acc;
-      }, {} as Record<string, { table_number: string; orders: OrderWithItems[]; settled_at: string }>);
+      });
 
-      return Object.entries(grouped).map(([billKey, data]) => {
-        // Assign order numbers based on chronological order
-        const ordersWithNumbers = data.orders
+      // We would need to fetch bill records to get display_bill_id
+      // For now, use bill_id grouping (this should be enhanced to fetch from bills table)
+      ordersByBillId.forEach((orders, billId) => {
+        const ordersWithNumbers = orders
           .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
           .map((order, index) => ({
             ...order,
             orderNumber: index + 1,
           }));
 
-        return {
-          bill_id: billKey,
-          table_number: data.table_number,
+        const firstOrder = orders[0];
+        billsMap.set(billId, {
+          bill_id: billId,
+          display_bill_id: 0, // Will be updated by fetchDashboardData
+          table_number: firstOrder.table_number,
           orders: ordersWithNumbers,
-          total: data.orders.reduce((sum, order) => sum + order.total, 0),
-          settled_at: data.settled_at,
-        };
-      }).sort((a, b) => new Date(b.settled_at!).getTime() - new Date(a.settled_at!).getTime()); // Most recent first
+          total: orders.reduce((sum, order) => sum + order.total, 0),
+          settled_at: firstOrder.updated_at,
+        });
+      });
+
+      return Array.from(billsMap.values()).sort((a, b) =>
+        new Date(b.settled_at!).getTime() - new Date(a.settled_at!).getTime()
+      );
     }
   };
 
