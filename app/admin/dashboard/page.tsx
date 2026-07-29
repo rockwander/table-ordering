@@ -49,6 +49,7 @@ import { Order, OrderStatus, BuzzerNotification as BuzzerNotificationType } from
 import { useRouter } from 'next/navigation';
 import { initializeNotifications, showLocalNotification, checkNotificationSupport } from '@/lib/notifications';
 import { initializePushNotifications } from '@/lib/fcm-notifications';
+import { playNewOrderSound, playServiceCallSound } from '@/lib/sound';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
@@ -277,12 +278,55 @@ function DashboardContent() {
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
+          schema: 'public',
+          table: 'orders',
+        },
+        async (payload) => {
+          console.log('🆕 New order detected:', payload.new);
+
+          // Play notification sound
+          await playNewOrderSound();
+
+          // Show notification
+          if (notificationsEnabled) {
+            const order = payload.new as any;
+            await showLocalNotification('🍽️ New Order!', {
+              body: `Table ${order.table_number} placed a new order`,
+              tag: `order-${order.id}`,
+              requireInteraction: true,
+              data: {
+                table_number: order.table_number,
+                order_id: order.id,
+                url: '/admin/dashboard'
+              }
+            });
+          }
+
+          debouncedRefresh();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
           schema: 'public',
           table: 'orders',
         },
         (payload) => {
-          console.log('📦 Order change detected:', payload.eventType, payload.new);
+          console.log('📦 Order updated:', payload.new);
+          debouncedRefresh();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'orders',
+        },
+        (payload) => {
+          console.log('📦 Order deleted');
           debouncedRefresh();
         }
       )
@@ -331,6 +375,9 @@ function DashboardContent() {
           if (newNotification.status === 'active') {
             console.log('✅ Adding notification toast for table:', newNotification.table_number);
             setActiveNotifications((prev) => [...prev, newNotification]);
+
+            // Play notification sound
+            await playServiceCallSound();
 
             // Show web push notification (works even when screen is off)
             if (notificationsEnabled) {

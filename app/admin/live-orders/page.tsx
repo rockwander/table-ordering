@@ -35,6 +35,10 @@ import AdminLayout from '@/components/AdminLayout';
 import { supabase } from '@/lib/supabase';
 import { Order, OrderStatus } from '@/types';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { initializeNotifications, showLocalNotification, checkNotificationSupport } from '@/lib/notifications';
+import { initializePushNotifications } from '@/lib/fcm-notifications';
+import { playNewOrderSound } from '@/lib/sound';
+import { Capacitor } from '@capacitor/core';
 
 const statusLabels: Record<OrderStatus, string> = {
   pending: 'Pending',
@@ -85,6 +89,8 @@ function LiveOrdersContent() {
   const [loading, setLoading] = useState(true);
   const [markingReady, setMarkingReady] = useState<string | null>(null);
   const [settlingBill, setSettlingBill] = useState<string | null>(null);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [lastOrderCount, setLastOrderCount] = useState(0);
   const { language, t } = useLanguage();
 
   // Helper function to get item name in current language
@@ -95,6 +101,33 @@ function LiveOrdersContent() {
     return item.name;
   };
 
+  // Initialize notifications
+  useEffect(() => {
+    const setupNotifications = async () => {
+      console.log('📱 Setting up Live Orders notifications...');
+
+      // For native mobile apps
+      if (Capacitor.isNativePlatform()) {
+        await initializePushNotifications();
+        console.log('✅ FCM push notifications initialized');
+        setNotificationsEnabled(true);
+        return;
+      }
+
+      // For web
+      const support = checkNotificationSupport();
+      if (support.supported) {
+        const initialized = await initializeNotifications();
+        setNotificationsEnabled(initialized);
+        if (initialized) {
+          console.log('✅ Web push notifications enabled');
+        }
+      }
+    };
+
+    setupNotifications();
+  }, []);
+
   useEffect(() => {
     fetchBills();
 
@@ -104,7 +137,39 @@ function LiveOrdersContent() {
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
+          schema: 'public',
+          table: 'orders',
+        },
+        async (payload) => {
+          console.log('🆕 New order detected:', payload.new);
+
+          // Play notification sound
+          await playNewOrderSound();
+
+          // Show notification
+          if (notificationsEnabled) {
+            const order = payload.new as any;
+            await showLocalNotification('🍽️ New Order!', {
+              body: `Table ${order.table_number} placed a new order`,
+              tag: `order-${order.id}`,
+              requireInteraction: true,
+              data: {
+                table_number: order.table_number,
+                order_id: order.id,
+                url: '/admin/live-orders'
+              }
+            });
+          }
+
+          // Refresh bills
+          fetchBills();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
           schema: 'public',
           table: 'orders',
         },
@@ -121,7 +186,7 @@ function LiveOrdersContent() {
       supabase.removeChannel(channel);
       clearInterval(interval);
     };
-  }, []);
+  }, [notificationsEnabled]);
 
   const fetchBills = async () => {
     try {
