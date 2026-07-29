@@ -153,6 +153,21 @@ WHERE email = 'user@example.com';
 
 ## Troubleshooting
 
+### Infinite recursion error (500 Internal Server Error)
+If you see this error in browser console:
+```
+Error fetching user role: {code: '42P17', details: null, hint: null, message: 'infinite recursion detected in policy for relation "user_roles"'}
+```
+
+**Solution**: Run the RLS fix migration:
+
+1. In Supabase Dashboard, go to **SQL Editor**
+2. Click **"New query"**
+3. Copy and paste the contents of `migrations/fix_user_roles_rls.sql`
+4. Click **"RUN"**
+
+This removes the problematic RLS policy that caused infinite recursion and replaces it with safer policies.
+
 ### Executive user sees all tabs
 - Check the `user_roles` table to verify they have the 'executive' role
 - Clear browser cache and log out/in again
