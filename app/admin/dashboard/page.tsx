@@ -715,7 +715,7 @@ function DashboardContent() {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Bill #${bill.bill_id}</title>
+        <title>Bill - Table ${bill.table_number}</title>
         <style>
           body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
           h1 { text-align: center; color: #D4691A; }
@@ -741,7 +741,8 @@ function DashboardContent() {
       <body>
         <div class="header">
           <h1>Ramani's Cafe</h1>
-          <p>Table: ${bill.table_number}</p>
+          <h2 style="border-bottom: none;">Table ${bill.table_number}</h2>
+          <p>
           <p>Date: ${new Date(bill.settled_at || new Date()).toLocaleString()}</p>
         </div>
 
@@ -1057,7 +1058,11 @@ function DashboardContent() {
                   <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', pr: 2 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Chip label={`Table ${bill.table_number}`} color="primary" />
+                        <Chip
+                          label={`Table ${bill.table_number}`}
+                          color="primary"
+                          sx={{ fontWeight: 700, fontSize: '1.1rem', px: 2, py: 2.5 }}
+                        />
                         <Typography variant="body1" fontWeight={600}>
                           {bill.orders.length} order{bill.orders.length !== 1 ? 's' : ''}
                         </Typography>

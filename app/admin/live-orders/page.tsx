@@ -468,11 +468,7 @@ function LiveOrdersContent() {
   };
 
   const handleSettleBill = async (bill: Bill) => {
-    const displayBillText = bill.display_bill_id > 0
-      ? `#${String(bill.display_bill_id).padStart(3, '0')}`
-      : '(Draft)';
-
-    if (!confirm(`Settle bill ${displayBillText} for Table ${bill.table_number}?`)) {
+    if (!confirm(`Settle bill for Table ${bill.table_number}?`)) {
       return;
     }
 
@@ -554,15 +550,11 @@ function LiveOrdersContent() {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    const billTitle = bill.display_bill_id > 0
-      ? `Bill #${String(bill.display_bill_id).padStart(3, '0')}`
-      : 'Bill (Draft)';
-
     const billHTML = `
       <!DOCTYPE html>
       <html>
       <head>
-        <title>${billTitle} - Table ${bill.table_number}</title>
+        <title>Bill - Table ${bill.table_number}</title>
         <style>
           body { font-family: Arial, sans-serif; padding: 20px; }
           h1 { text-align: center; color: #D4691A; }
@@ -580,8 +572,8 @@ function LiveOrdersContent() {
       </head>
       <body>
         <h1>Ramani's Cafe</h1>
-        <p style="text-align: center;">${billTitle}</p>
-        <p><strong>Table:</strong> ${bill.table_number}</p>
+        <h2 style="text-align: center; border-bottom: none;">Table ${bill.table_number}</h2>
+        <p style="text-align: center; font-size: 14px; color: #666;">
         <p><strong>Date:</strong> ${new Date(bill.created_at).toLocaleString()}</p>
 
         ${bill.orders.map((order, index) => `
@@ -738,11 +730,10 @@ function LiveOrdersContent() {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', pr: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Chip
-                      label={bill.display_bill_id > 0 ? `Bill #${String(bill.display_bill_id).padStart(3, '0')}` : 'Draft'}
-                      color={bill.display_bill_id > 0 ? 'secondary' : 'default'}
-                      sx={{ fontWeight: 700 }}
+                      label={`Table ${bill.table_number}`}
+                      color="primary"
+                      sx={{ fontWeight: 700, fontSize: '1.1rem', px: 2, py: 2.5 }}
                     />
-                    <Chip label={`Table ${bill.table_number}`} color="primary" />
                     <Typography variant="body1" fontWeight={600}>
                       {bill.orders.length} {bill.orders.length !== 1 ? t('liveOrders.orders') : t('liveOrders.order')}
                     </Typography>
