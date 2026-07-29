@@ -85,7 +85,15 @@ function LiveOrdersContent() {
   const [loading, setLoading] = useState(true);
   const [markingReady, setMarkingReady] = useState<string | null>(null);
   const [settlingBill, setSettlingBill] = useState<string | null>(null);
-  const { language, getItemName } = useLanguage();
+  const { language } = useLanguage();
+
+  // Helper function to get item name in current language
+  const getItemName = (item: { name: string; gujarati_name?: string | null }) => {
+    if (language === 'gu' && item.gujarati_name) {
+      return item.gujarati_name;
+    }
+    return item.name;
+  };
 
   useEffect(() => {
     fetchBills();
