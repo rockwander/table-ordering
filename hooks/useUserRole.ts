@@ -9,10 +9,14 @@ export function useUserRole() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     async function fetchUserRole() {
       try {
         // Get current user
         const { data: { user } } = await supabase.auth.getUser();
+
+        if (!isMounted) return;
 
         if (!user) {
           setRole(null);
@@ -29,6 +33,8 @@ export function useUserRole() {
           .eq('user_id', user.id)
           .single();
 
+        if (!isMounted) return;
+
         if (error) {
           console.error('Error fetching user role:', error);
           // Default to null if no role found
@@ -38,21 +44,38 @@ export function useUserRole() {
         }
       } catch (error) {
         console.error('Error in fetchUserRole:', error);
-        setRole(null);
+        if (isMounted) {
+          setRole(null);
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     }
 
-    fetchUserRole();
+    // Set timeout to force loading to false
+    const loadingTimeout = setTimeout(() => {
+      console.warn('useUserRole: Loading timeout - forcing loading to false');
+      if (isMounted) {
+        setLoading(false);
+      }
+    }, 5000); // 5 second timeout
+
+    fetchUserRole().finally(() => {
+      clearTimeout(loadingTimeout);
+    });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      // Don't show loading spinner for subsequent auth changes
       fetchUserRole();
     });
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
+      clearTimeout(loadingTimeout);
     };
   }, []);
 

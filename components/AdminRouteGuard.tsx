@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Box, CircularProgress } from '@mui/material';
+import { Box, CircularProgress, Typography } from '@mui/material';
 import { useUserRole } from '@/hooks/useUserRole';
 
 interface AdminRouteGuardProps {
@@ -42,12 +42,17 @@ export default function AdminRouteGuard({ children, requireAdmin = false }: Admi
       <Box
         sx={{
           display: 'flex',
+          flexDirection: 'column',
           justifyContent: 'center',
           alignItems: 'center',
           minHeight: '100vh',
+          gap: 2,
         }}
       >
         <CircularProgress />
+        <Typography variant="body2" color="text.secondary">
+          Verifying access...
+        </Typography>
       </Box>
     );
   }
