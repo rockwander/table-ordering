@@ -85,7 +85,7 @@ function LiveOrdersContent() {
   const [loading, setLoading] = useState(true);
   const [markingReady, setMarkingReady] = useState<string | null>(null);
   const [settlingBill, setSettlingBill] = useState<string | null>(null);
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
 
   // Helper function to get item name in current language
   const getItemName = (item: { name: string; gujarati_name?: string | null }) => {
@@ -383,19 +383,19 @@ function LiveOrdersContent() {
     <Box>
       <Box sx={{ mb: 3 }}>
         <Typography variant="h4" fontWeight={700} gutterBottom>
-          Live Orders
+          {t('liveOrders.title')}
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Real-time order management and billing
+          {t('liveOrders.subtitle')}
         </Typography>
       </Box>
 
       {/* Tabs */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={selectedTab} onChange={(_, v) => setSelectedTab(v)}>
-          <Tab label="New Orders" />
-          <Tab label="Settle Bill" />
-          <Tab label="Past Bills" />
+          <Tab label={t('liveOrders.newOrders')} />
+          <Tab label={t('liveOrders.settleBill')} />
+          <Tab label={t('liveOrders.pastBills')} />
         </Tabs>
       </Box>
 
@@ -403,9 +403,9 @@ function LiveOrdersContent() {
       {filteredBills.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 8 }}>
           <Typography variant="h6" color="text.secondary">
-            {selectedTab === 0 && 'No new orders'}
-            {selectedTab === 1 && 'No bills to settle'}
-            {selectedTab === 2 && 'No past bills'}
+            {selectedTab === 0 && t('liveOrders.noNewOrders')}
+            {selectedTab === 1 && t('liveOrders.noBillsToSettle')}
+            {selectedTab === 2 && t('liveOrders.noPastBills')}
           </Typography>
         </Box>
       ) : (
@@ -422,7 +422,7 @@ function LiveOrdersContent() {
                     />
                     <Chip label={`Table ${bill.table_number}`} color="primary" />
                     <Typography variant="body1" fontWeight={600}>
-                      {bill.orders.length} order{bill.orders.length !== 1 ? 's' : ''}
+                      {bill.orders.length} {bill.orders.length !== 1 ? t('liveOrders.orders') : t('liveOrders.order')}
                     </Typography>
                   </Box>
                   <Box sx={{ textAlign: 'right' }}>
@@ -489,10 +489,10 @@ function LiveOrdersContent() {
                           <Table size="small">
                             <TableHead>
                               <TableRow>
-                                <TableCell>Item</TableCell>
-                                <TableCell align="center">Qty</TableCell>
-                                <TableCell align="right">Price</TableCell>
-                                <TableCell align="right">Total</TableCell>
+                                <TableCell>{t('liveOrders.item')}</TableCell>
+                                <TableCell align="center">{t('liveOrders.qty')}</TableCell>
+                                <TableCell align="right">{t('liveOrders.price')}</TableCell>
+                                <TableCell align="right">{t('bill.total')}</TableCell>
                               </TableRow>
                             </TableHead>
                             <TableBody>
@@ -502,7 +502,7 @@ function LiveOrdersContent() {
                                     <Typography variant="body2">{getItemName(item)}</Typography>
                                     {item.special_instructions && (
                                       <Typography variant="caption" color="text.secondary">
-                                        Note: {item.special_instructions}
+                                        {t('liveOrders.note')}: {item.special_instructions}
                                       </Typography>
                                     )}
                                   </TableCell>
@@ -528,7 +528,7 @@ function LiveOrdersContent() {
                                 onClick={() => handleMarkAsReady(order.id)}
                                 disabled={markingReady === order.id}
                               >
-                                {markingReady === order.id ? 'Marking...' : 'Mark as Ready'}
+                                {markingReady === order.id ? t('liveOrders.marking') : t('liveOrders.markAsReady')}
                               </Button>
                             )}
                           </Box>
@@ -547,15 +547,15 @@ function LiveOrdersContent() {
                     <Card variant="outlined" sx={{ mt: 2, bgcolor: 'grey.50' }}>
                       <CardContent>
                         <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-                          Bill Summary
+                          {t('liveOrders.billSummary')}
                         </Typography>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                          <Typography variant="body2">Subtotal ({bill.orders.length} order{bill.orders.length !== 1 ? 's' : ''})</Typography>
+                          <Typography variant="body2">{t('bill.subtotal')} ({bill.orders.length} {bill.orders.length !== 1 ? t('liveOrders.orders') : t('liveOrders.order')})</Typography>
                           <Typography variant="body2">₹{bill.total.toFixed(2)}</Typography>
                         </Box>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                           <Typography variant="body2" color="success.main" fontWeight={600}>
-                            App Discount (10%)
+                            {t('liveOrders.appDiscount')}
                           </Typography>
                           <Typography variant="body2" color="success.main" fontWeight={600}>
                             - ₹{(bill.total * 0.1).toFixed(2)}
@@ -564,7 +564,7 @@ function LiveOrdersContent() {
                         <Divider sx={{ my: 1 }} />
                         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                           <Typography variant="h6" fontWeight={700}>
-                            Final Amount
+                            {t('liveOrders.finalAmount')}
                           </Typography>
                           <Typography variant="h6" fontWeight={700} color="primary">
                             ₹{(bill.total * 0.9).toFixed(2)}
@@ -579,7 +579,7 @@ function LiveOrdersContent() {
                         startIcon={<PrintIcon />}
                         onClick={() => handlePrintBill(bill)}
                       >
-                        Print Bill
+                        {t('actions.print')}
                       </Button>
                       <Button
                         variant="contained"
@@ -588,7 +588,7 @@ function LiveOrdersContent() {
                         onClick={() => handleSettleBill(bill)}
                         disabled={settlingBill === bill.bill_id}
                       >
-                        {settlingBill === bill.bill_id ? 'Settling...' : 'Settle Bill'}
+                        {settlingBill === bill.bill_id ? t('actions.settling') : t('actions.settle')}
                       </Button>
                     </Box>
                   </>
@@ -603,7 +603,7 @@ function LiveOrdersContent() {
                       onClick={() => handlePrintBill(bill)}
                       fullWidth
                     >
-                      Print Bill
+                      {t('actions.print')}
                     </Button>
                   </Box>
                 )}
