@@ -90,7 +90,8 @@ function LiveOrdersContent() {
   const [markingReady, setMarkingReady] = useState<string | null>(null);
   const [settlingBill, setSettlingBill] = useState<string | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [lastOrderCount, setLastOrderCount] = useState(0);
+  const [processedOrderIds, setProcessedOrderIds] = useState<Set<string>>(new Set());
+  const [isAppActive, setIsAppActive] = useState(true);
   const { language, t } = useLanguage();
 
   // Helper function to get item name in current language
@@ -100,6 +101,18 @@ function LiveOrdersContent() {
     }
     return item.name;
   };
+
+  // Track app visibility to prevent sound replay when returning to app
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      const isNowActive = !document.hidden;
+      setIsAppActive(isNowActive);
+      console.log(`📱 App visibility changed: ${isNowActive ? 'active' : 'background'}`);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
 
   // Initialize notifications
   useEffect(() => {
@@ -142,14 +155,24 @@ function LiveOrdersContent() {
           table: 'orders',
         },
         async (payload) => {
-          console.log('🆕 New order detected:', payload.new);
+          const order = payload.new as any;
+          console.log('🆕 New order detected:', order);
 
-          // Play notification sound
-          await playNewOrderSound();
+          // Only play sound if app is active AND we haven't processed this order yet
+          if (isAppActive && !processedOrderIds.has(order.id)) {
+            console.log('🔊 Playing sound for new order (app is active)');
+            await playNewOrderSound();
+            setProcessedOrderIds(prev => new Set(prev).add(order.id));
+          } else if (!isAppActive) {
+            console.log('🔇 App is in background, skipping sound');
+            // Mark as processed so sound doesn't play when returning
+            setProcessedOrderIds(prev => new Set(prev).add(order.id));
+          } else {
+            console.log('🔇 Order already processed, skipping sound');
+          }
 
-          // Show notification
+          // Always show notification (OS handles this)
           if (notificationsEnabled) {
-            const order = payload.new as any;
             await showLocalNotification('🍽️ New Order!', {
               body: `Table ${order.table_number} placed a new order`,
               tag: `order-${order.id}`,
