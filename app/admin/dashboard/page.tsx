@@ -251,22 +251,20 @@ function DashboardContent() {
       weekStart.setDate(today.getDate() - daysFromMonday);
       weekStart.setHours(0, 0, 0, 0);
 
-      // Fetch all orders
+      // Fetch all settled bills (for revenue - post-discount)
+      const { data: allBillsData, error: billsError } = await supabase
+        .from('bills')
+        .select('*')
+        .order('settled_at', { ascending: false });
+
+      if (billsError) throw billsError;
+
+      const allBills = allBillsData || [];
+
+      // Fetch all orders (for order count)
       const { data: allOrdersData, error: ordersError } = await supabase
         .from('orders')
-        .select(`
-          *,
-          order_items (
-            id,
-            menu_item:menu_items (
-              name,
-              gujarati_name
-            ),
-            quantity,
-            price,
-            special_instructions
-          )
-        `)
+        .select('id, created_at, status')
         .order('created_at', { ascending: false });
 
       if (ordersError) throw ordersError;
@@ -274,24 +272,26 @@ function DashboardContent() {
       const allOrders = allOrdersData || [];
 
       // Calculate today's stats
+      const todayBills = allBills.filter(bill =>
+        new Date(bill.settled_at) >= today
+      );
       const todayOrders = allOrders.filter(order =>
         new Date(order.created_at) >= today
       );
 
       const todayOrdersCount = todayOrders.length || 0;
-      const todayRevenue = todayOrders
-        .filter((o) => o.status === 'paid')
-        .reduce((sum, o) => sum + o.total, 0) || 0;
+      const todayRevenue = todayBills.reduce((sum, bill) => sum + bill.total, 0) || 0;
 
       // Calculate month's stats
+      const monthBills = allBills.filter(bill =>
+        new Date(bill.settled_at) >= monthStart
+      );
       const monthOrders = allOrders.filter(order =>
         new Date(order.created_at) >= monthStart
       );
 
       const monthOrdersCount = monthOrders.length || 0;
-      const monthRevenue = monthOrders
-        .filter((o) => o.status === 'paid')
-        .reduce((sum, o) => sum + o.total, 0) || 0;
+      const monthRevenue = monthBills.reduce((sum, bill) => sum + bill.total, 0) || 0;
 
       setStats({
         todayOrders: todayOrdersCount,
@@ -308,14 +308,19 @@ function DashboardContent() {
         const nextDay = new Date(dayDate);
         nextDay.setDate(dayDate.getDate() + 1);
 
+        // Get bills settled on this day (for revenue - post-discount)
+        const dayBills = allBills.filter(bill => {
+          const billDate = new Date(bill.settled_at);
+          return billDate >= dayDate && billDate < nextDay;
+        });
+
+        // Get orders created on this day (for count)
         const dayOrders = allOrders.filter(order => {
           const orderDate = new Date(order.created_at);
           return orderDate >= dayDate && orderDate < nextDay;
         });
 
-        const dayRevenue = dayOrders
-          .filter(o => o.status === 'paid')
-          .reduce((sum, o) => sum + o.total, 0);
+        const dayRevenue = dayBills.reduce((sum, bill) => sum + bill.total, 0);
 
         return {
           name: day,
@@ -335,14 +340,19 @@ function DashboardContent() {
         const nextDay = new Date(dayDate);
         nextDay.setDate(dayDate.getDate() + 1);
 
+        // Get bills settled on this day (for revenue - post-discount)
+        const dayBills = allBills.filter(bill => {
+          const billDate = new Date(bill.settled_at);
+          return billDate >= dayDate && billDate < nextDay;
+        });
+
+        // Get orders created on this day (for count)
         const dayOrders = allOrders.filter(order => {
           const orderDate = new Date(order.created_at);
           return orderDate >= dayDate && orderDate < nextDay;
         });
 
-        const dayRevenue = dayOrders
-          .filter(o => o.status === 'paid')
-          .reduce((sum, o) => sum + o.total, 0);
+        const dayRevenue = dayBills.reduce((sum, bill) => sum + bill.total, 0);
 
         monthlyChartData.push({
           name: `${day}`,
