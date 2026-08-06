@@ -653,13 +653,32 @@ function LiveOrdersContent() {
 
         <div class="footer">
           <p>Thank you for dining with us!</p>
-          <p>Ramani's Cafe - Premium South Indian Cuisine</p>
+          <p>Ramani's Cafe - Authentic South Indian Cafe</p>
         </div>
 
         <div class="no-print" style="text-align: center; margin-top: 30px;">
           <button onclick="window.print()" style="padding: 10px 30px; background: #D4691A; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer;">Print Bill</button>
           <button onclick="window.close()" style="padding: 10px 30px; background: #666; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; margin-left: 10px;">Close</button>
         </div>
+
+        <script>
+          // Auto-trigger print dialog when page loads
+          window.onload = function() {
+            window.print();
+          };
+
+          // Close window after printing (or if user cancels)
+          window.onafterprint = function() {
+            // Give user a moment to see the preview before closing
+            setTimeout(function() {
+              window.close();
+              // If window.close() doesn't work (browser restriction), show a message
+              setTimeout(function() {
+                document.body.innerHTML = '<div style="text-align: center; padding: 50px;"><h2>You can close this tab now</h2><p>If this tab didn\'t close automatically, please close it manually.</p></div>';
+              }, 100);
+            }, 500);
+          };
+        </script>
       </body>
       </html>
     `;
