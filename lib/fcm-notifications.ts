@@ -93,37 +93,19 @@ export const initializePushNotifications = async () => {
     PushNotifications.addListener('pushNotificationReceived', async (notification) => {
       console.log('🔔 ========== PUSH RECEIVED (APP OPEN) ==========');
       console.log('📬 Notification:', JSON.stringify(notification, null, 2));
+      console.log('📢 Type:', notification?.data?.type);
 
-      // Create unique ID for deduplication
-      const notificationId = `${notification?.data?.type || 'unknown'}-${notification?.data?.tableNumber || 'none'}`;
-      const now = Date.now();
+      // DON'T show system notification when app is in foreground
+      // The Live Orders page handles this with in-app sound (10s loop, tap to stop)
+      // This prevents duplicate sounds (system + in-app)
 
-      // Check if we handled this notification recently (within 10 seconds)
-      const lastHandled = handledNotifications.get(notificationId);
-      if (lastHandled && (now - lastHandled) < 10000) {
-        console.log('⏭️ Notification handled recently (within 10s), skipping');
-        return;
-      }
+      console.log('✅ App is in foreground - notification handled by in-app sound');
+      console.log('⏭️ Skipping system notification to avoid duplicate sound');
 
-      // Mark as handled
-      handledNotifications.set(notificationId, now);
-
-      // Clean up old entries
-      const cutoffTime = now - 30000;
-      for (const [id, timestamp] of handledNotifications.entries()) {
-        if (timestamp < cutoffTime) {
-          handledNotifications.delete(id);
-        }
-      }
-
-      console.log('🆕 New notification, triggering sound...');
-
-      // Show local notification with sound
-      try {
-        await showLocalNotificationWithSound(notification);
-      } catch (error) {
-        console.error('❌ Error showing local notification:', error);
-      }
+      // Note: The Realtime subscription in Live Orders page will:
+      // - Play the appropriate sound (10-second loop)
+      // - Allow tap-to-stop functionality
+      // - Show toast notification in the app UI
     });
 
     // STEP 8: Handle notification tapped (app in background/closed)
