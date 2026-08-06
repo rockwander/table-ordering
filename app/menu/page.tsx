@@ -26,9 +26,31 @@ import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import Header from '@/components/Header';
+import HighlightCircles from '@/components/HighlightCircles';
+import StoryViewer from '@/components/StoryViewer';
 import { supabase } from '@/lib/supabase';
 import { Category, MenuItem } from '@/types';
 import { useCart } from '@/contexts/CartContext';
+
+interface Story {
+  id: string;
+  category_id: string;
+  image_url: string;
+  caption: string | null;
+  gujarati_caption: string | null;
+  display_order: number;
+  duration: number;
+}
+
+interface HighlightCategory {
+  id: string;
+  name: string;
+  gujarati_name: string | null;
+  cover_image_url: string | null;
+  display_order: number;
+  is_active: boolean;
+  highlight_stories?: Story[];
+}
 
 function MenuContent() {
   const searchParams = useSearchParams();
@@ -44,6 +66,7 @@ function MenuContent() {
   const [buzzerSending, setBuzzerSending] = useState(false);
   const [buzzerSuccess, setBuzzerSuccess] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedHighlight, setSelectedHighlight] = useState<HighlightCategory | null>(null);
 
   const { cartItems, addToCart, updateQuantity, removeFromCart, getCartItemCount } = useCart();
 
@@ -262,6 +285,11 @@ function MenuContent() {
               Offer will be auto-applied while settling bill
             </Typography>
           </Box>
+        </Box>
+
+        {/* Story Highlights */}
+        <Box sx={{ mb: 3, mx: -1 }}>
+          <HighlightCircles onHighlightClick={setSelectedHighlight} />
         </Box>
 
         {/* Search Bar */}
@@ -1006,6 +1034,12 @@ function MenuContent() {
           Place Order • {getCartItemCount()} {getCartItemCount() === 1 ? 'item' : 'items'}
         </Button>
       )}
+
+      {/* Story Viewer Modal */}
+      <StoryViewer
+        category={selectedHighlight}
+        onClose={() => setSelectedHighlight(null)}
+      />
     </Box>
   );
 }
