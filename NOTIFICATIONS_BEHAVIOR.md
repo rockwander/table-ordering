@@ -379,5 +379,144 @@ If you're hearing both sounds for a new order, please check:
 
 ---
 
+## FURTHER IMPROVEMENTS (2026-08-06)
+
+### Evolution: System-Only Notifications with 10-Second Looping Sounds
+
+After fixing the duplicate notification issue, we refined the approach further:
+
+**Previous Approach (Interim Solution):**
+- App open → In-app sound only (10s loop, tap to stop)
+- App closed → System notification only
+- Problem: Two different codepaths, inconsistent behavior
+
+**Current Approach (Final Solution):**
+- **Use ONLY system notifications for all cases**
+- **Remove all in-app sound playback**
+- **Create 10-second looped sound files for system notifications**
+
+### Why This Approach is Better
+
+1. **Consistency:** Same notification mechanism whether app is open, closed, or in background
+2. **Reliability:** System notifications are more reliable than web audio (no autoplay restrictions)
+3. **Native Experience:** Uses Android's native notification system
+4. **Better UX:** Notifications appear in system tray with proper icons, actions, etc.
+5. **Simpler Code:** Single codepath for all notification scenarios
+
+### How We Achieved 10-Second Looping with System Notifications
+
+**Problem:** Android notification channels play sound files once, not in a loop.
+
+**Solution:** Pre-process audio files to create 10-second looped versions
+
+**Implementation:**
+
+1. **Created Script:** `scripts/generate-10s-notification-sounds.sh`
+   - Uses `ffmpeg` to loop original audio files
+   - Generates exactly 10 seconds of audio
+   - Maintains original audio quality
+   - Output: `new_order_10s.wav`, `waiter_call_10s.wav`
+
+2. **Sound File Locations:**
+   - **Android:** `android/app/src/main/res/raw/new_order.wav` (replaced with 10s version)
+   - **Android:** `android/app/src/main/res/raw/waiter_call.wav` (replaced with 10s version)
+   - **Web:** `public/new_order_10s.wav` (for web notifications)
+   - **Web:** `public/waiter_call_10s.wav` (for web notifications)
+
+3. **Script Usage:**
+   ```bash
+   chmod +x scripts/generate-10s-notification-sounds.sh
+   ./scripts/generate-10s-notification-sounds.sh
+   ```
+
+### Code Changes
+
+**File:** `app/admin/live-orders/page.tsx`
+- Removed: `playNewOrderSound()` calls (line ~195)
+- Removed: `playServiceCallSound()` calls (line ~254)
+- Removed: Import of sound functions (kept only `stopNotificationSound` for cleanup)
+- Removed: In-app sound playback logic
+- Added: Log messages explaining that system notifications handle sound
+
+**File:** `lib/fcm-notifications.ts`
+- Added: Deduplication logic to prevent multiple notifications for same event
+- Added: 10-second time window for deduplication (using Map with timestamps)
+- Changed: Always show system notification (even when app is in foreground)
+- Changed: Use looped 10-second sound files for notifications
+- Added: Cleanup of old deduplication entries (remove after 30 seconds)
+
+### Deduplication Logic
+
+To prevent duplicate notifications (since both Realtime and FCM can trigger):
+
+```typescript
+const notificationId = `${type}-${tableNumber}`;
+const now = Date.now();
+
+// Check if we handled this notification recently (within 10 seconds)
+const lastHandled = handledNotifications.get(notificationId);
+if (lastHandled && (now - lastHandled) < 10000) {
+  console.log('⏭️ Notification handled recently, skipping');
+  return;
+}
+
+// Mark as handled
+handledNotifications.set(notificationId, now);
+```
+
+**Benefits:**
+- Prevents duplicate notifications within 10-second window
+- Tracks by notification type + table number
+- Auto-cleanup of old entries (after 30 seconds)
+- Memory-efficient (uses Map instead of growing array)
+
+### Tap-to-Stop Functionality
+
+**Previous:** Tap anywhere on Live Orders page to stop in-app sound
+
+**Current:** System notifications are controlled by Android OS:
+- Swipe notification → Removes notification and stops sound
+- Tap notification → Opens app (sound continues until 10s elapsed)
+- After 10 seconds → Sound stops automatically
+
+**Trade-off:** Lost the custom "tap anywhere to stop" feature, but gained:
+- More reliable notifications
+- Better integration with Android system
+- Notifications in system tray
+- Consistent behavior across all app states
+
+### Testing Results
+
+✅ **App CLOSED** → Order placed → System notification plays 10s looped sound
+✅ **App OPEN, on Live Orders** → Order placed → System notification plays 10s looped sound
+✅ **App OPEN, other page** → Order placed → System notification plays 10s looped sound
+✅ **No duplicate sounds** in any scenario
+✅ **Waiter call** → Correct sound plays (different from new order, 10s looped)
+✅ **Deduplication** → Same notification within 10s window doesn't play twice
+
+### Summary of Notification Techniques Used
+
+1. ✅ **System-only notifications** (no in-app audio)
+2. ✅ **10-second pre-looped audio files** (not runtime looping)
+3. ✅ **Deduplication with time-based tracking** (Map with timestamps)
+4. ✅ **Script-based audio processing** (ffmpeg for looping)
+5. ✅ **Separate notification channels** (new_orders vs waiter_calls)
+6. ✅ **FCM push notifications** (Firebase Cloud Messaging)
+7. ✅ **Capacitor LocalNotifications** (for showing system notifications)
+8. ✅ **Notification type detection** (order vs buzzer)
+9. ✅ **Auth-gated notifications** (only active FCM tokens)
+
+### Files Modified in This Iteration
+
+- `app/admin/live-orders/page.tsx` - Removed in-app sound playback
+- `lib/fcm-notifications.ts` - Added deduplication, always show system notification
+- `android/app/src/main/res/raw/new_order.wav` - Replaced with 10s version
+- `android/app/src/main/res/raw/waiter_call.wav` - Replaced with 10s version
+- `public/new_order_10s.wav` - Added for web notifications
+- `public/waiter_call_10s.wav` - Added for web notifications
+- `scripts/generate-10s-notification-sounds.sh` - New script for audio processing
+
+---
+
 **Last Updated:** 2026-08-06
-**Status:** ✅ FIXED - Duplicate notification issue resolved
+**Status:** ✅ OPTIMIZED - Using system-only notifications with 10-second looped sounds
