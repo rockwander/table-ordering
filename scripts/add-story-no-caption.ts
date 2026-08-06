@@ -27,7 +27,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function addStory() {
   const categoryId = 'e1f85e45-fa67-4c31-877b-9564561fe262'; // Our Values category
-  const imagePath = '/Users/raghav/Downloads/ChatGPT Image Aug 7, 2026, 01_27_31 AM.png';
+  const imagePath = '/Users/raghav/Downloads/ChatGPT Image Aug 7, 2026, 01_55_15 AM.png';
 
   console.log('Adding story to "Our Values" category...\n');
   console.log('Uploading image...');
@@ -40,7 +40,7 @@ async function addStory() {
 
   // Read the image file
   const imageFile = fs.readFileSync(imagePath);
-  const fileName = `${Date.now()}_our_values_story_1.png`;
+  const fileName = `${Date.now()}_our_values_story_2.png`;
 
   // Upload to Supabase Storage
   const { data: uploadData, error: uploadError } = await supabase.storage
@@ -70,7 +70,7 @@ async function addStory() {
       image_url: publicUrl,
       caption: null,
       gujarati_caption: null,
-      display_order: 1,
+      display_order: 2,
       duration: 5000
     })
     .select()

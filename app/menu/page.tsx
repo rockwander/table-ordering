@@ -249,6 +249,11 @@ function MenuContent() {
       />
 
       <Container maxWidth="lg" sx={{ py: 3 }}>
+        {/* Story Highlights */}
+        <Box sx={{ mb: 3, mx: -1 }}>
+          <HighlightCircles onHighlightClick={setSelectedHighlight} />
+        </Box>
+
         <Box sx={{ mb: 3 }}>
           <Typography variant="h4" gutterBottom fontWeight={700}>
             Our Menu
@@ -285,11 +290,6 @@ function MenuContent() {
               Offer will be auto-applied while settling bill
             </Typography>
           </Box>
-        </Box>
-
-        {/* Story Highlights */}
-        <Box sx={{ mb: 3, mx: -1 }}>
-          <HighlightCircles onHighlightClick={setSelectedHighlight} />
         </Box>
 
         {/* Search Bar */}
