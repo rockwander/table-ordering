@@ -33,6 +33,8 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminLayout from '@/components/AdminLayout';
 import BuzzerNotification from '@/components/BuzzerNotification';
+import CreateAdminOrderDialog from '@/components/CreateAdminOrderDialog';
+import EditOrderDialog from '@/components/EditOrderDialog';
 import { supabase } from '@/lib/supabase';
 import { Order, OrderStatus, BuzzerNotification as BuzzerNotificationType } from '@/types';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -40,6 +42,8 @@ import { initializeNotifications, showLocalNotification, checkNotificationSuppor
 import { initializePushNotifications } from '@/lib/fcm-notifications';
 import { playNewOrderSound, playServiceCallSound } from '@/lib/sound';
 import { Capacitor } from '@capacitor/core';
+import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
 
 const statusLabels: Record<OrderStatus, string> = {
   pending: 'Pending',
@@ -78,7 +82,7 @@ interface OrderWithItems extends Order {
 interface Bill {
   bill_id: string;
   display_bill_id: number;
-  table_number: string;
+  table_number: string | null; // null for admin orders
   orders: OrderWithItems[];
   total: number;
   created_at: string;
@@ -94,6 +98,9 @@ function LiveOrdersContent() {
   const [processedOrderIds, setProcessedOrderIds] = useState<Set<string>>(new Set());
   const [isAppActive, setIsAppActive] = useState(true);
   const [activeNotifications, setActiveNotifications] = useState<BuzzerNotificationType[]>([]);
+  const [createOrderDialogOpen, setCreateOrderDialogOpen] = useState(false);
+  const [editOrderDialogOpen, setEditOrderDialogOpen] = useState(false);
+  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
 
   // Use refs to avoid stale closures in real-time subscriptions
   const isAppActiveRef = useRef(isAppActive);
@@ -721,12 +728,24 @@ function LiveOrdersContent() {
       )}
 
       <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" fontWeight={700} gutterBottom>
-          {t('liveOrders.title')}
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          {t('liveOrders.subtitle')}
-        </Typography>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Box>
+            <Typography variant="h4" fontWeight={700} gutterBottom>
+              {t('liveOrders.title')}
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              {t('liveOrders.subtitle')}
+            </Typography>
+          </Box>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setCreateOrderDialogOpen(true)}
+            size="large"
+          >
+            {t('adminOrder.createOrder') || 'Create Order'}
+          </Button>
+        </Box>
       </Box>
 
       {/* Tabs */}
@@ -755,8 +774,8 @@ function LiveOrdersContent() {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', pr: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Chip
-                      label={`Table ${bill.table_number}`}
-                      color="primary"
+                      label={bill.table_number ? `Table ${bill.table_number}` : (t('adminOrder.adminOrder') || 'Admin Order')}
+                      color={bill.table_number ? 'primary' : 'secondary'}
                       sx={{ fontWeight: 700, fontSize: '1.1rem', px: 2, py: 2.5 }}
                     />
                     <Typography variant="body1" fontWeight={600}>
@@ -808,6 +827,19 @@ function LiveOrdersContent() {
                               color={statusColors[order.status]}
                               size="small"
                             />
+                            {selectedTab === 1 && order.status !== 'paid' && (
+                              <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={() => {
+                                  setEditingOrderId(order.id);
+                                  setEditOrderDialogOpen(true);
+                                }}
+                                title={t('orderEdit.editOrder') || 'Edit Order'}
+                              >
+                                <EditIcon />
+                              </IconButton>
+                            )}
                             {selectedTab !== 2 && (
                               <IconButton
                                 size="small"
@@ -950,6 +982,31 @@ function LiveOrdersContent() {
           ))}
         </Box>
       )}
+
+      {/* Create Admin Order Dialog */}
+      <CreateAdminOrderDialog
+        open={createOrderDialogOpen}
+        onClose={() => setCreateOrderDialogOpen(false)}
+        onOrderCreated={() => {
+          fetchBills(); // Refresh the bills list
+          setCreateOrderDialogOpen(false);
+        }}
+      />
+
+      {/* Edit Order Dialog */}
+      <EditOrderDialog
+        open={editOrderDialogOpen}
+        orderId={editingOrderId}
+        onClose={() => {
+          setEditOrderDialogOpen(false);
+          setEditingOrderId(null);
+        }}
+        onOrderUpdated={() => {
+          fetchBills(); // Refresh the bills list
+          setEditOrderDialogOpen(false);
+          setEditingOrderId(null);
+        }}
+      />
     </Box>
   );
 }

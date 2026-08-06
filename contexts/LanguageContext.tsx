@@ -86,6 +86,29 @@ const translations = {
     'liveOrders.billSummary': 'Bill Summary',
     'liveOrders.appDiscount': 'App Discount (10%)',
     'liveOrders.finalAmount': 'Final Amount',
+
+    // Admin Order
+    'adminOrder.createOrder': 'Create Order',
+    'adminOrder.adminOrder': 'Admin Order',
+    'adminOrder.orderItems': 'Order Items',
+    'adminOrder.noItems': 'No items added yet',
+    'adminOrder.specialInstructions': 'Special instructions (optional)',
+
+    // Order Edit
+    'orderEdit.editOrder': 'Edit Order',
+    'orderEdit.items': 'Order Items',
+    'orderEdit.noItems': 'No items in order',
+    'orderEdit.specialInstructions': 'Special instructions',
+    'orderEdit.addItems': 'Add Items',
+    'orderEdit.hideMenu': 'Hide Menu',
+    'orderEdit.discounts': 'Discounts',
+    'orderEdit.removeAppDiscount': 'Remove 10% App Discount',
+    'orderEdit.customDiscount': 'Custom Discount Amount',
+    'orderEdit.summary': 'Summary',
+    'orderEdit.saveChanges': 'Save Changes',
+
+    // Common
+    'common.cancel': 'Cancel',
   },
   gu: {
     // Dashboard
@@ -162,6 +185,29 @@ const translations = {
     'liveOrders.billSummary': 'બિલ સારાંશ',
     'liveOrders.appDiscount': 'એપ ડિસ્કાઉન્ટ (10%)',
     'liveOrders.finalAmount': 'અંતિમ રકમ',
+
+    // Admin Order
+    'adminOrder.createOrder': 'ઓર્ડર બનાવો',
+    'adminOrder.adminOrder': 'એડમિન ઓર્ડર',
+    'adminOrder.orderItems': 'ઓર્ડર વસ્તુઓ',
+    'adminOrder.noItems': 'હજી સુધી કોઈ વસ્તુઓ ઉમેરાયેલ નથી',
+    'adminOrder.specialInstructions': 'વિશેષ સૂચનાઓ (વૈકલ્પિક)',
+
+    // Order Edit
+    'orderEdit.editOrder': 'ઓર્ડર એડિટ કરો',
+    'orderEdit.items': 'ઓર્ડર વસ્તુઓ',
+    'orderEdit.noItems': 'ઓર્ડરમાં કોઈ વસ્તુઓ નથી',
+    'orderEdit.specialInstructions': 'વિશેષ સૂચનાઓ',
+    'orderEdit.addItems': 'વસ્તુઓ ઉમેરો',
+    'orderEdit.hideMenu': 'મેનુ છુપાવો',
+    'orderEdit.discounts': 'ડિસ્કાઉન્ટ',
+    'orderEdit.removeAppDiscount': '10% એપ ડિસ્કાઉન્ટ દૂર કરો',
+    'orderEdit.customDiscount': 'કસ્ટમ ડિસ્કાઉન્ટ રકમ',
+    'orderEdit.summary': 'સારાંશ',
+    'orderEdit.saveChanges': 'ફેરફારો સાચવો',
+
+    // Common
+    'common.cancel': 'રદ કરો',
   },
 };
 

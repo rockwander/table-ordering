@@ -25,20 +25,36 @@ export const initializePushNotifications = async () => {
   try {
     console.log('🚀 Initializing FCM Push Notifications...');
 
-    // STEP 1: Create notification channel for Android with alarm sound
-    console.log('📢 Creating notification channel with alarm.ogg...');
+    // STEP 1: Create TWO notification channels - one for orders, one for waiter calls
+    console.log('📢 Creating notification channels...');
+
+    // Channel for NEW ORDERS (casino bells sound)
     await LocalNotifications.createChannel({
-      id: 'orders',
-      name: 'Order Notifications',
-      description: 'Notifications for new orders and waiter calls',
-      sound: 'alarm.ogg', // Custom alarm sound
+      id: 'new_orders',
+      name: 'New Orders',
+      description: 'Notifications for new customer orders',
+      sound: 'new_order.wav',
       importance: 5, // Max importance - shows as heads-up notification
       visibility: 1, // Public
       lights: true,
-      lightColor: '#FF0000',
+      lightColor: '#FF9800', // Orange for orders
       vibration: true,
     });
-    console.log('✅ Notification channel created');
+    console.log('✅ New Orders channel created with new_order.wav');
+
+    // Channel for WAITER CALLS (happy bells sound)
+    await LocalNotifications.createChannel({
+      id: 'waiter_calls',
+      name: 'Waiter Calls',
+      description: 'Notifications for waiter service requests',
+      sound: 'waiter_call.wav',
+      importance: 5, // Max importance - shows as heads-up notification
+      visibility: 1, // Public
+      lights: true,
+      lightColor: '#F44336', // Red for urgent waiter calls
+      vibration: true,
+    });
+    console.log('✅ Waiter Calls channel created with waiter_call.wav');
 
     // STEP 2: Request permissions for local notifications
     const localPerm = await LocalNotifications.requestPermissions();
@@ -130,23 +146,30 @@ const showLocalNotificationWithSound = async (notification: any) => {
     // Extract title and body
     const title = notification?.notification?.title || notification?.title || 'New Notification';
     const body = notification?.notification?.body || notification?.body || '';
+    const notificationType = notification?.data?.type || 'order';
+
+    // Determine channel and sound based on notification type
+    const isWaiterCall = notificationType === 'buzzer';
+    const channelId = isWaiterCall ? 'waiter_calls' : 'new_orders';
+    const sound = isWaiterCall ? 'waiter_call.wav' : 'new_order.wav';
 
     console.log(`📢 Title: "${title}"`);
     console.log(`📢 Body: "${body}"`);
-    console.log(`🔔 Sound: alarm.ogg`);
-    console.log(`📡 Channel: orders`);
+    console.log(`📢 Type: ${notificationType}`);
+    console.log(`🔔 Sound: ${sound}`);
+    console.log(`📡 Channel: ${channelId}`);
 
     const notificationId = Date.now();
 
-    // Schedule local notification with sound
+    // Schedule local notification with appropriate sound and channel
     const result = await LocalNotifications.schedule({
       notifications: [
         {
           title: title,
           body: body,
           id: notificationId,
-          sound: 'alarm.ogg',
-          channelId: 'orders',
+          sound: sound,
+          channelId: channelId,
           extra: notification?.data || {},
         },
       ],
@@ -167,9 +190,21 @@ const saveFCMToken = async (token: string) => {
   console.log('💾 FCM token saved to localStorage');
 
   try {
+    // Get current Supabase session to include auth header
+    const { supabase } = await import('@/lib/supabase');
+    const { data: { session } } = await supabase.auth.getSession();
+
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+      console.log('📝 Saving FCM token with user authentication');
+    } else {
+      console.log('📝 Saving FCM token anonymously (no user session)');
+    }
+
     const response = await fetch('/api/save-fcm-token', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ token }),
     });
 
@@ -178,7 +213,7 @@ const saveFCMToken = async (token: string) => {
     if (data.error) {
       console.error('❌ Failed to save FCM token to DB:', data.error);
     } else {
-      console.log('✅ FCM token saved to database');
+      console.log('✅ FCM token saved to database', data.userId ? `(user: ${data.userId})` : '(anonymous)');
     }
   } catch (error) {
     console.error('❌ Error saving FCM token:', error);

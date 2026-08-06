@@ -20,9 +20,13 @@ async function sendNotification(payload: NotificationPayload) {
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+  // IMPORTANT: Only send to ACTIVE tokens with a user_id (logged-in users)
+  // This ensures users who logged out don't receive notifications
   const { data: tokens, error } = await supabase
     .from("fcm_tokens")
-    .select("token");
+    .select("token")
+    .eq("active", true)
+    .not("user_id", "is", null); // Only send to logged-in users
 
   if (error) {
     console.error("Error fetching FCM tokens:", error);
@@ -30,9 +34,11 @@ async function sendNotification(payload: NotificationPayload) {
   }
 
   if (!tokens || tokens.length === 0) {
-    console.log("No FCM tokens found");
+    console.log("No active FCM tokens found (no logged-in users)");
     return { success: true, message: "No devices to notify" };
   }
+
+  console.log(`📱 Found ${tokens.length} active token(s) from logged-in users`);
 
   // Get Firebase service account
   const serviceAccount = JSON.parse(Deno.env.get("FIREBASE_SERVICE_ACCOUNT") || "{}");
@@ -105,6 +111,14 @@ async function sendNotification(payload: NotificationPayload) {
   const tokenData = await tokenResponse.json();
   const accessToken = tokenData.access_token;
 
+  // Determine channel and sound based on notification type
+  const isWaiterCall = payload.data?.type === "buzzer";
+  const channelId = isWaiterCall ? "waiter_calls" : "new_orders";
+  const sound = isWaiterCall ? "waiter_call.wav" : "new_order.wav";
+
+  console.log(`🔔 Notification type: ${payload.data?.type || 'unknown'}`);
+  console.log(`📢 Using channel: ${channelId} with sound: ${sound}`);
+
   // Send notification to each token
   const results = await Promise.all(
     tokens.map(async ({ token }) => {
@@ -128,8 +142,8 @@ async function sendNotification(payload: NotificationPayload) {
                 android: {
                   priority: "high",
                   notification: {
-                    sound: "alarm.ogg",
-                    channel_id: "orders",
+                    sound: sound,
+                    channel_id: channelId,
                     default_sound: false,
                     default_vibrate_timings: false,
                   },
