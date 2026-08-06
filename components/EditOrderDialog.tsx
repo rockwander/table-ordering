@@ -20,6 +20,7 @@ import {
   FormControlLabel,
   Checkbox,
   InputAdornment,
+  Autocomplete,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
@@ -359,41 +360,39 @@ export default function EditOrderDialog({
               </Box>
             )}
 
-            {/* Add Items Section */}
-            <Button
-              startIcon={<AddIcon />}
-              onClick={() => setShowAddItems(!showAddItems)}
-              variant="outlined"
-              fullWidth
-              sx={{ mb: 2 }}
-            >
-              {showAddItems ? (t('orderEdit.hideMenu') || 'Hide Menu') : (t('orderEdit.addItems') || 'Add Items')}
-            </Button>
+            {/* Add Items Section - Multiselect Dropdown with Search */}
+            <Autocomplete
+              multiple
+              options={menuItems}
+              getOptionLabel={(option) => `${getName(option)} - ₹${option.price}`}
+              onChange={(event, newValue) => {
+                // Add all selected items
+                newValue.forEach((item) => {
+                  // Check if item already exists in order
+                  const existingIndex = orderItems.findIndex(
+                    orderItem => orderItem.menu_item_id === item.id
+                  );
 
-            {showAddItems && (
-              <Box sx={{ mb: 2, maxHeight: 200, overflowY: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1 }}>
-                <Grid container spacing={1}>
-                  {menuItems.map((item) => (
-                    <Grid item xs={6} key={item.id}>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        fullWidth
-                        onClick={() => addMenuItem(item)}
-                        sx={{ justifyContent: 'space-between' }}
-                      >
-                        <Typography variant="caption" noWrap>
-                          {getName(item)}
-                        </Typography>
-                        <Typography variant="caption" fontWeight={700}>
-                          ₹{item.price}
-                        </Typography>
-                      </Button>
-                    </Grid>
-                  ))}
-                </Grid>
-              </Box>
-            )}
+                  if (existingIndex === -1) {
+                    // Item not in order, add it
+                    addMenuItem(item);
+                  }
+                });
+              }}
+              value={[]} // Always reset after selection
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label={t('orderEdit.addItems') || 'Add Items'}
+                  placeholder={t('orderEdit.searchItems') || 'Search items...'}
+                />
+              )}
+              sx={{ mb: 2 }}
+              size="small"
+              filterSelectedOptions={false}
+              clearOnEscape
+              disableCloseOnSelect
+            />
 
             <Divider sx={{ my: 2 }} />
 
