@@ -48,6 +48,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import { PushNotifications } from '@capacitor/push-notifications';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
+import { jsPDF } from 'jspdf';
 
 const statusLabels: Record<OrderStatus, string> = {
   pending: 'Pending',
@@ -590,112 +591,130 @@ function LiveOrdersContent() {
   };
 
   const handlePrintBill = (bill: Bill) => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+    try {
+      const doc = new jsPDF();
+      const applyDiscount = getBillDiscount(bill.bill_id);
 
-    const billHTML = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Bill - Table ${bill.table_number}</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 20px; }
-          h1 { text-align: center; color: #D4691A; }
-          h2 { margin-top: 20px; border-bottom: 2px solid #D4691A; padding-bottom: 5px; }
-          table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-          th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
-          th { background-color: #f5f5f5; font-weight: bold; }
-          .text-right { text-align: right; }
-          .totals { margin-top: 20px; text-align: right; }
-          .total-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 14px; }
-          .grand-total { font-size: 18px; font-weight: bold; border-top: 2px solid #000; padding-top: 10px; margin-top: 10px; }
-          .footer { text-align: center; margin-top: 30px; color: #666; }
-          @media print { .no-print { display: none; } }
-        </style>
-      </head>
-      <body>
-        <h1>Ramani's Cafe</h1>
-        <h2 style="text-align: center; border-bottom: none;">Table ${bill.table_number}</h2>
-        <p style="text-align: center; font-size: 14px; color: #666;">
-        <p><strong>Date:</strong> ${new Date(bill.created_at).toLocaleString()}</p>
+      // Header
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text("Ramani's Cafe", 105, 20, { align: 'center' });
 
-        ${bill.orders.map((order, index) => `
-          <h2>Order #${order.orderNumber} - ${statusLabels[order.status]}</h2>
-          <p style="font-size: 12px; color: #666;">${new Date(order.created_at).toLocaleString()}</p>
-          <table>
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th class="text-right">Qty</th>
-                <th class="text-right">Price</th>
-                <th class="text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${order.order_items.map(item => `
-                <tr>
-                  <td>
-                    ${getItemName(item)}
-                    ${item.special_instructions ? `<br><small style="color: #666;">Note: ${item.special_instructions}</small>` : ''}
-                  </td>
-                  <td class="text-right">${item.quantity}</td>
-                  <td class="text-right">₹${item.price.toFixed(2)}</td>
-                  <td class="text-right">₹${(item.quantity * item.price).toFixed(2)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        `).join('')}
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Authentic South Indian Cafe', 105, 28, { align: 'center' });
 
-        <div class="totals">
-          <div class="total-row">
-            <span>Subtotal:</span>
-            <span>₹${bill.total.toFixed(2)}</span>
-          </div>
-          <div class="total-row" style="color: #22c55e; font-weight: 600;">
-            <span>App Discount (10%):</span>
-            <span>- ₹${(bill.total * 0.1).toFixed(2)}</span>
-          </div>
-          <div class="total-row grand-total">
-            <span>Final Amount:</span>
-            <span>₹${(bill.total * 0.9).toFixed(2)}</span>
-          </div>
-        </div>
+      // Table and Date
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Table ${bill.table_number || 'Admin Order'}`, 105, 40, { align: 'center' });
 
-        <div class="footer">
-          <p>Thank you for dining with us!</p>
-          <p>Ramani's Cafe - Authentic South Indian Cafe</p>
-        </div>
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Date: ${new Date(bill.created_at).toLocaleString()}`, 105, 48, { align: 'center' });
 
-        <div class="no-print" style="text-align: center; margin-top: 30px;">
-          <button onclick="window.print()" style="padding: 10px 30px; background: #D4691A; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer;">Print Bill</button>
-          <button onclick="window.close()" style="padding: 10px 30px; background: #666; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; margin-left: 10px;">Close</button>
-        </div>
+      let yPos = 58;
 
-        <script>
-          // Auto-trigger print dialog when page loads
-          window.onload = function() {
-            window.print();
-          };
+      // Orders
+      bill.orders.forEach((order, orderIndex) => {
+        // Order header
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Order #${order.orderNumber} - ${statusLabels[order.status]}`, 20, yPos);
+        yPos += 6;
 
-          // Close window after printing (or if user cancels)
-          window.onafterprint = function() {
-            // Give user a moment to see the preview before closing
-            setTimeout(function() {
-              window.close();
-              // If window.close() doesn't work (browser restriction), show a message
-              setTimeout(function() {
-                document.body.innerHTML = '<div style="text-align: center; padding: 50px;"><h2>You can close this tab now</h2><p>If this tab didn\'t close automatically, please close it manually.</p></div>';
-              }, 100);
-            }, 500);
-          };
-        </script>
-      </body>
-      </html>
-    `;
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text(new Date(order.created_at).toLocaleString(), 20, yPos);
+        yPos += 8;
 
-    printWindow.document.write(billHTML);
-    printWindow.document.close();
+        // Table header
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Item', 20, yPos);
+        doc.text('Qty', 120, yPos, { align: 'right' });
+        doc.text('Price', 150, yPos, { align: 'right' });
+        doc.text('Total', 190, yPos, { align: 'right' });
+        yPos += 2;
+
+        // Line under header
+        doc.line(20, yPos, 190, yPos);
+        yPos += 6;
+
+        // Order items
+        doc.setFont('helvetica', 'normal');
+        order.order_items.forEach((item) => {
+          const itemName = getItemName(item);
+          doc.text(itemName.substring(0, 35), 20, yPos);
+          doc.text(item.quantity.toString(), 120, yPos, { align: 'right' });
+          doc.text(`₹${item.price.toFixed(2)}`, 150, yPos, { align: 'right' });
+          doc.text(`₹${(item.quantity * item.price).toFixed(2)}`, 190, yPos, { align: 'right' });
+          yPos += 5;
+
+          if (item.special_instructions) {
+            doc.setFontSize(8);
+            doc.setTextColor(100);
+            doc.text(`Note: ${item.special_instructions.substring(0, 50)}`, 25, yPos);
+            doc.setTextColor(0);
+            doc.setFontSize(10);
+            yPos += 5;
+          }
+
+          // Check if we need a new page
+          if (yPos > 270) {
+            doc.addPage();
+            yPos = 20;
+          }
+        });
+
+        yPos += 5;
+      });
+
+      // Totals
+      yPos += 5;
+      doc.line(120, yPos, 190, yPos);
+      yPos += 8;
+
+      doc.setFontSize(11);
+      doc.text('Subtotal:', 120, yPos);
+      doc.text(`₹${bill.total.toFixed(2)}`, 190, yPos, { align: 'right' });
+      yPos += 7;
+
+      if (applyDiscount) {
+        doc.setTextColor(34, 197, 94); // Green color
+        doc.setFont('helvetica', 'bold');
+        doc.text('App Discount (10%):', 120, yPos);
+        doc.text(`- ₹${(bill.total * 0.1).toFixed(2)}`, 190, yPos, { align: 'right' });
+        doc.setTextColor(0);
+        yPos += 10;
+      } else {
+        yPos += 3;
+      }
+
+      doc.line(120, yPos, 190, yPos);
+      yPos += 8;
+
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Final Amount:', 120, yPos);
+      doc.text(`₹${(applyDiscount ? bill.total * 0.9 : bill.total).toFixed(2)}`, 190, yPos, { align: 'right' });
+
+      // Footer
+      yPos += 20;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Thank you for dining with us!', 105, yPos, { align: 'center' });
+      yPos += 6;
+      doc.text("Ramani's Cafe - Authentic South Indian Cafe", 105, yPos, { align: 'center' });
+
+      // Download PDF
+      const fileName = `Bill_Table_${bill.table_number || 'Admin'}_${new Date().toISOString().slice(0, 10)}.pdf`;
+      doc.save(fileName);
+
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+    }
   };
 
   // Filter bills based on selected tab
