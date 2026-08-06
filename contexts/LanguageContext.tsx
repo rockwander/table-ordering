@@ -37,6 +37,7 @@ const translations = {
     'actions.settling': 'Settling...',
     'actions.print': 'Print Bill',
     'actions.delete': 'Delete',
+    'actions.deleting': 'Deleting...',
     'actions.cancel': 'Cancel',
     'actions.confirm': 'Confirm',
 
@@ -138,6 +139,7 @@ const translations = {
     'actions.settling': 'ચૂકવી રહ્યા છીએ...',
     'actions.print': 'બિલ છાપો',
     'actions.delete': 'કાઢી નાખો',
+    'actions.deleting': 'કાઢી રહ્યા છીએ...',
     'actions.cancel': 'રદ કરો',
     'actions.confirm': 'કન્ફર્મ કરો',
 

@@ -99,6 +99,7 @@ function LiveOrdersContent() {
   const [loading, setLoading] = useState(true);
   const [markingReady, setMarkingReady] = useState<string | null>(null);
   const [settlingBill, setSettlingBill] = useState<string | null>(null);
+  const [deletingBill, setDeletingBill] = useState<string | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [processedOrderIds, setProcessedOrderIds] = useState<Set<string>>(new Set());
   const [billDiscounts, setBillDiscounts] = useState<Record<string, boolean>>({}); // Track discount state per bill (default true)
@@ -590,6 +591,44 @@ function LiveOrdersContent() {
     }
   };
 
+  const handleDeleteBill = async (bill: Bill) => {
+    if (!confirm(`Are you sure you want to delete this bill for Table ${bill.table_number}? This will delete all orders in this bill.`)) {
+      return;
+    }
+
+    setDeletingBill(bill.bill_id);
+    try {
+      const orderIds = bill.orders.map(order => order.id);
+
+      // Delete order items first
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .delete()
+        .in('order_id', orderIds);
+
+      if (itemsError) throw itemsError;
+
+      // Delete orders
+      const { error: ordersError } = await supabase
+        .from('orders')
+        .delete()
+        .in('id', orderIds);
+
+      if (ordersError) throw ordersError;
+
+      // Delete bill record if it exists in bills table
+      // Note: bill_id might be temporary (from grouping), only delete if it's a real bill
+      // For now, we'll just refresh - the bill will disappear since orders are deleted
+
+      await fetchBills();
+    } catch (error) {
+      console.error('Error deleting bill:', error);
+      alert('Failed to delete bill');
+    } finally {
+      setDeletingBill(null);
+    }
+  };
+
   const handlePrintBill = (bill: Bill) => {
     try {
       const doc = new jsPDF();
@@ -733,10 +772,15 @@ function LiveOrdersContent() {
         return bills.filter(bill =>
           bill.orders.some(order => order.status !== 'paid')
         );
-      case 2: // Past Bills - bills where all orders are paid
-        return bills.filter(bill =>
-          bill.orders.every(order => order.status === 'paid')
-        );
+      case 2: // Past Bills - bills where all orders are paid AND created today
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return bills.filter(bill => {
+          const billDate = new Date(bill.created_at);
+          billDate.setHours(0, 0, 0, 0);
+          return bill.orders.every(order => order.status === 'paid') &&
+                 billDate.getTime() === today.getTime();
+        });
       default:
         return [];
     }
@@ -1058,9 +1102,9 @@ function LiveOrdersContent() {
                   </>
                 )}
 
-                {/* Past Bills - Show print option */}
+                {/* Past Bills - Show print and delete options */}
                 {selectedTab === 2 && (
-                  <Box sx={{ mt: 2 }}>
+                  <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
                     <Button
                       variant="outlined"
                       startIcon={<PrintIcon />}
@@ -1068,6 +1112,16 @@ function LiveOrdersContent() {
                       fullWidth
                     >
                       {t('actions.print')}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      startIcon={<DeleteIcon />}
+                      onClick={() => handleDeleteBill(bill)}
+                      disabled={deletingBill === bill.bill_id}
+                      fullWidth
+                    >
+                      {deletingBill === bill.bill_id ? t('actions.deleting') : t('actions.delete')}
                     </Button>
                   </Box>
                 )}
