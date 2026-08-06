@@ -40,7 +40,7 @@ import { Order, OrderStatus, BuzzerNotification as BuzzerNotificationType } from
 import { useLanguage } from '@/contexts/LanguageContext';
 import { initializeNotifications, showLocalNotification, checkNotificationSupport } from '@/lib/notifications';
 import { initializePushNotifications } from '@/lib/fcm-notifications';
-import { playNewOrderSound, playServiceCallSound, stopNotificationSound } from '@/lib/sound';
+import { stopNotificationSound } from '@/lib/sound'; // Only keep stopNotificationSound for tap-to-dismiss
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { PushNotifications } from '@capacitor/push-notifications';
@@ -190,18 +190,11 @@ function LiveOrdersContent() {
           // Immediately refresh bills for instant UI update
           fetchBills();
 
-          // Play sound and notifications in parallel (non-blocking)
-          // Only play sound if app is active AND we haven't processed this order yet
-          if (isAppActiveRef.current && !processedOrderIdsRef.current.has(order.id)) {
-            console.log('🔊 Playing sound for new order (app is active)');
-            playNewOrderSound().catch(err => console.error('Sound error:', err));
+          // DON'T play in-app sound - system notification handles sound
+          // Mark order as processed to track it
+          if (!processedOrderIdsRef.current.has(order.id)) {
+            console.log('✅ New order detected - system notification will play 10s sound');
             setProcessedOrderIds(prev => new Set(prev).add(order.id));
-          } else if (!isAppActiveRef.current) {
-            console.log('🔇 App is in background, skipping sound');
-            // Mark as processed so sound doesn't play when returning
-            setProcessedOrderIds(prev => new Set(prev).add(order.id));
-          } else {
-            console.log('🔇 Order already processed, skipping sound');
           }
 
           // Always show notification (OS handles this) - non-blocking
@@ -252,8 +245,8 @@ function LiveOrdersContent() {
             // Immediately update UI
             setActiveNotifications((prev) => [...prev, newNotification]);
 
-            // Play notification sound (non-blocking)
-            playServiceCallSound().catch(err => console.error('Sound error:', err));
+            // DON'T play in-app sound - system notification handles sound
+            console.log('✅ Waiter call detected - system notification will play 10s sound');
 
             // Show web push notification (works even when screen is off) - non-blocking
             if (notificationsEnabledRef.current) {
