@@ -74,8 +74,7 @@ export default function EditOrderDialog({
   const [error, setError] = useState<string | null>(null);
 
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
-  const [removeAppDiscount, setRemoveAppDiscount] = useState(false);
-  const [customDiscount, setCustomDiscount] = useState<number>(0);
+  const [applyDiscount, setApplyDiscount] = useState(true); // Default to true (10% discount applied)
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [showAddItems, setShowAddItems] = useState(false);
 
@@ -113,15 +112,10 @@ export default function EditOrderDialog({
 
       setOrderItems(data.order_items || []);
 
-      // Calculate if app discount was applied
+      // Calculate if app discount was applied (default is true)
       const expectedTotal = data.subtotal * 0.9; // With 10% discount
       const hasAppDiscount = Math.abs(data.total - expectedTotal) < 0.01;
-      setRemoveAppDiscount(!hasAppDiscount);
-
-      // Check if there's a custom discount (total is less than subtotal but not 10%)
-      if (!hasAppDiscount && data.total < data.subtotal) {
-        setCustomDiscount(data.subtotal - data.total);
-      }
+      setApplyDiscount(hasAppDiscount);
     } catch (err: any) {
       console.error('Error fetching order:', err);
       setError(err.message);
@@ -198,11 +192,7 @@ export default function EditOrderDialog({
   const calculateDiscount = () => {
     const subtotal = calculateSubtotal();
 
-    if (customDiscount > 0) {
-      return customDiscount;
-    }
-
-    if (!removeAppDiscount) {
+    if (applyDiscount) {
       return subtotal * 0.1; // 10% app discount
     }
 
@@ -278,8 +268,7 @@ export default function EditOrderDialog({
 
   const handleClose = () => {
     setOrderItems([]);
-    setRemoveAppDiscount(false);
-    setCustomDiscount(0);
+    setApplyDiscount(true); // Reset to default (discount applied)
     setShowAddItems(false);
     setError(null);
     onClose();
@@ -404,35 +393,13 @@ export default function EditOrderDialog({
             <FormControlLabel
               control={
                 <Checkbox
-                  checked={removeAppDiscount}
+                  checked={applyDiscount}
                   onChange={(e) => {
-                    setRemoveAppDiscount(e.target.checked);
-                    if (e.target.checked) {
-                      setCustomDiscount(0); // Reset custom discount
-                    }
+                    setApplyDiscount(e.target.checked);
                   }}
                 />
               }
-              label={t('orderEdit.removeAppDiscount') || 'Remove 10% App Discount'}
-            />
-
-            <TextField
-              fullWidth
-              type="number"
-              label={t('orderEdit.customDiscount') || 'Custom Discount Amount'}
-              value={customDiscount}
-              onChange={(e) => {
-                const value = parseFloat(e.target.value) || 0;
-                setCustomDiscount(value);
-                if (value > 0) {
-                  setRemoveAppDiscount(true); // Auto-remove app discount
-                }
-              }}
-              disabled={!removeAppDiscount}
-              InputProps={{
-                startAdornment: <InputAdornment position="start">₹</InputAdornment>,
-              }}
-              sx={{ mt: 1 }}
+              label={t('orderEdit.applyDiscount') || 'Apply 10% Discount'}
             />
 
             <Divider sx={{ my: 2 }} />
@@ -451,10 +418,7 @@ export default function EditOrderDialog({
               {calculateDiscount() > 0 && (
                 <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography variant="body2" color="success.main">
-                    {customDiscount > 0
-                      ? (t('orderEdit.customDiscount') || 'Custom Discount')
-                      : (t('liveOrders.appDiscount') || 'App Discount (10%)')
-                    }:
+                    {t('liveOrders.appDiscount') || 'App Discount (10%)'}:
                   </Typography>
                   <Typography variant="body2" color="success.main">
                     - ₹{calculateDiscount().toFixed(2)}

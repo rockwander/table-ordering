@@ -24,6 +24,8 @@ import {
   Chip,
   Divider,
   Alert,
+  Checkbox,
+  FormControlLabel,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -98,6 +100,7 @@ function LiveOrdersContent() {
   const [settlingBill, setSettlingBill] = useState<string | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [processedOrderIds, setProcessedOrderIds] = useState<Set<string>>(new Set());
+  const [billDiscounts, setBillDiscounts] = useState<Record<string, boolean>>({}); // Track discount state per bill (default true)
   const [isAppActive, setIsAppActive] = useState(true);
   const [activeNotifications, setActiveNotifications] = useState<BuzzerNotificationType[]>([]);
   const [createOrderDialogOpen, setCreateOrderDialogOpen] = useState(false);
@@ -494,6 +497,18 @@ function LiveOrdersContent() {
     }
   };
 
+  const getBillDiscount = (billId: string): boolean => {
+    // Default to true (discount applied) if not explicitly set
+    return billDiscounts[billId] !== undefined ? billDiscounts[billId] : true;
+  };
+
+  const toggleBillDiscount = (billId: string) => {
+    setBillDiscounts(prev => ({
+      ...prev,
+      [billId]: !getBillDiscount(billId)
+    }));
+  };
+
   const handleSettleBill = async (bill: Bill) => {
     if (!confirm(`Settle bill for Table ${bill.table_number}?`)) {
       return;
@@ -504,9 +519,10 @@ function LiveOrdersContent() {
       const orderIds = bill.orders.map(order => order.id);
       const settlementTime = new Date().toISOString();
 
-      // Calculate bill totals
+      // Calculate bill totals with discount consideration
       const billSubtotal = bill.orders.reduce((sum, order) => sum + order.subtotal, 0);
-      const billTotal = bill.orders.reduce((sum, order) => sum + order.total, 0);
+      const applyDiscount = getBillDiscount(bill.bill_id);
+      const billTotal = applyDiscount ? billSubtotal * 0.9 : billSubtotal;
 
       // Generate bill number (format: BILL-YYYYMMDD-HHMMSS)
       const now = new Date();
@@ -820,12 +836,20 @@ function LiveOrdersContent() {
                   <Box sx={{ textAlign: 'right' }}>
                     {selectedTab === 1 && (
                       <>
-                        <Typography variant="body2" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
-                          ₹{bill.total.toFixed(2)}
-                        </Typography>
-                        <Typography variant="h6" fontWeight={700} color="success.main">
-                          ₹{(bill.total * 0.9).toFixed(2)}
-                        </Typography>
+                        {getBillDiscount(bill.bill_id) ? (
+                          <>
+                            <Typography variant="body2" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
+                              ₹{bill.total.toFixed(2)}
+                            </Typography>
+                            <Typography variant="h6" fontWeight={700} color="success.main">
+                              ₹{(bill.total * 0.9).toFixed(2)}
+                            </Typography>
+                          </>
+                        ) : (
+                          <Typography variant="h6" fontWeight={700} color="primary">
+                            ₹{bill.total.toFixed(2)}
+                          </Typography>
+                        )}
                       </>
                     )}
                     {selectedTab !== 1 && (
@@ -958,21 +982,37 @@ function LiveOrdersContent() {
                           <Typography variant="body2">{t('bill.subtotal')} ({bill.orders.length} {bill.orders.length !== 1 ? t('liveOrders.orders') : t('liveOrders.order')})</Typography>
                           <Typography variant="body2">₹{bill.total.toFixed(2)}</Typography>
                         </Box>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                          <Typography variant="body2" color="success.main" fontWeight={600}>
-                            {t('liveOrders.appDiscount')}
-                          </Typography>
-                          <Typography variant="body2" color="success.main" fontWeight={600}>
-                            - ₹{(bill.total * 0.1).toFixed(2)}
-                          </Typography>
-                        </Box>
+
+                        {/* Discount Checkbox */}
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={getBillDiscount(bill.bill_id)}
+                              onChange={() => toggleBillDiscount(bill.bill_id)}
+                            />
+                          }
+                          label={t('orderEdit.applyDiscount') || 'Apply 10% Discount'}
+                          sx={{ mb: 1 }}
+                        />
+
+                        {getBillDiscount(bill.bill_id) && (
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                            <Typography variant="body2" color="success.main" fontWeight={600}>
+                              {t('liveOrders.appDiscount')}
+                            </Typography>
+                            <Typography variant="body2" color="success.main" fontWeight={600}>
+                              - ₹{(bill.total * 0.1).toFixed(2)}
+                            </Typography>
+                          </Box>
+                        )}
+
                         <Divider sx={{ my: 1 }} />
                         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                           <Typography variant="h6" fontWeight={700}>
                             {t('liveOrders.finalAmount')}
                           </Typography>
                           <Typography variant="h6" fontWeight={700} color="primary">
-                            ₹{(bill.total * 0.9).toFixed(2)}
+                            ₹{(getBillDiscount(bill.bill_id) ? bill.total * 0.9 : bill.total).toFixed(2)}
                           </Typography>
                         </Box>
                       </CardContent>
