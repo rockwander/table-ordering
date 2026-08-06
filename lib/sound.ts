@@ -2,68 +2,89 @@
 // Plays notification sound for new orders and service calls
 
 let audioContext: AudioContext | null = null;
-let audioElement: HTMLAudioElement | null = null;
+let newOrderAudio: HTMLAudioElement | null = null;
+let waiterCallAudio: HTMLAudioElement | null = null;
+let currentLoopInterval: NodeJS.Timeout | null = null;
+let currentStopTimeout: NodeJS.Timeout | null = null;
 
-// Create a beep sound using Web Audio API (works even without audio files)
-export async function playNotificationSound(): Promise<void> {
-  try {
-    // Try to use HTMLAudioElement first (iOS/Safari friendly)
-    if (!audioElement) {
-      audioElement = new Audio();
-      // Use a data URI for a simple beep sound
-      // This is a simple 440Hz sine wave beep
-      audioElement.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZSA0PVqzn77BdGAg+ltryxnMpBSuBzvLZiTYIGGe77OmfTQwN';
-      audioElement.volume = 1.0;
-    }
+// Stop any currently playing notification sound
+export function stopNotificationSound(): void {
+  console.log('🛑 Stopping notification sound');
 
-    // Play the sound
-    const playPromise = audioElement.play();
+  // Stop new order audio
+  if (newOrderAudio) {
+    newOrderAudio.pause();
+    newOrderAudio.currentTime = 0;
+  }
 
-    if (playPromise !== undefined) {
-      await playPromise;
-      console.log('✅ Notification sound played');
-    }
-  } catch (error) {
-    console.warn('⚠️ Could not play notification sound:', error);
+  // Stop waiter call audio
+  if (waiterCallAudio) {
+    waiterCallAudio.pause();
+    waiterCallAudio.currentTime = 0;
+  }
 
-    // Fallback: Try Web Audio API
-    try {
-      if (!audioContext) {
-        audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      }
+  // Clear any pending intervals/timeouts
+  if (currentLoopInterval) {
+    clearInterval(currentLoopInterval);
+    currentLoopInterval = null;
+  }
 
-      // Create a simple beep
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-
-      oscillator.frequency.value = 800; // 800 Hz beep
-      oscillator.type = 'sine';
-
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.5);
-
-      console.log('✅ Web Audio API beep played');
-    } catch (webAudioError) {
-      console.error('❌ All audio playback methods failed:', webAudioError);
-    }
+  if (currentStopTimeout) {
+    clearTimeout(currentStopTimeout);
+    currentStopTimeout = null;
   }
 }
 
-// Play a double beep for new orders
-export async function playNewOrderSound(): Promise<void> {
-  await playNotificationSound();
-  setTimeout(() => playNotificationSound(), 300);
+// Play notification sound with looping for 10 seconds
+async function playLoopingSound(soundFile: string, label: string): Promise<void> {
+  try {
+    // Stop any existing sounds first
+    stopNotificationSound();
+
+    // Create audio element for this sound
+    const audio = new Audio(soundFile);
+    audio.volume = 1.0;
+
+    // Store reference based on type
+    if (label === 'New Order') {
+      newOrderAudio = audio;
+    } else {
+      waiterCallAudio = audio;
+    }
+
+    console.log(`🔊 Starting ${label} sound loop for 10 seconds`);
+
+    // Play the sound initially
+    await audio.play();
+
+    // Set up looping - replay every 2 seconds
+    currentLoopInterval = setInterval(async () => {
+      try {
+        audio.currentTime = 0;
+        await audio.play();
+        console.log(`🔄 Looping ${label} sound`);
+      } catch (err) {
+        console.error('Error looping sound:', err);
+      }
+    }, 2000);
+
+    // Automatically stop after 10 seconds
+    currentStopTimeout = setTimeout(() => {
+      console.log(`⏱️ 10 seconds elapsed - stopping ${label} sound`);
+      stopNotificationSound();
+    }, 10000);
+
+  } catch (error) {
+    console.error(`❌ Failed to play ${label} sound:`, error);
+  }
 }
 
-// Play a triple beep for service calls
+// Play new order sound (loops for 10 seconds, can be stopped by tap)
+export async function playNewOrderSound(): Promise<void> {
+  await playLoopingSound('/mixkit-casino-bells-reward-1981.wav', 'New Order');
+}
+
+// Play waiter call sound (loops for 10 seconds, can be stopped by tap)
 export async function playServiceCallSound(): Promise<void> {
-  await playNotificationSound();
-  setTimeout(() => playNotificationSound(), 250);
-  setTimeout(() => playNotificationSound(), 500);
+  await playLoopingSound('/mixkit-happy-bells-notification-937.wav', 'Waiter Call');
 }

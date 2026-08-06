@@ -40,7 +40,7 @@ import { Order, OrderStatus, BuzzerNotification as BuzzerNotificationType } from
 import { useLanguage } from '@/contexts/LanguageContext';
 import { initializeNotifications, showLocalNotification, checkNotificationSupport } from '@/lib/notifications';
 import { initializePushNotifications } from '@/lib/fcm-notifications';
-import { playNewOrderSound, playServiceCallSound } from '@/lib/sound';
+import { playNewOrderSound, playServiceCallSound, stopNotificationSound } from '@/lib/sound';
 import { Capacitor } from '@capacitor/core';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -704,7 +704,16 @@ function LiveOrdersContent() {
   }
 
   return (
-    <Box onClick={activeNotifications.length > 0 ? handleDismissAllNotifications : undefined}>
+    <Box
+      onClick={() => {
+        // Stop any playing notification sounds when user taps anywhere
+        stopNotificationSound();
+        // Also dismiss notifications if any are active
+        if (activeNotifications.length > 0) {
+          handleDismissAllNotifications();
+        }
+      }}
+    >
       {/* Toast Notifications - Stacked */}
       {activeNotifications.length > 0 && (
         <Box
@@ -741,7 +750,7 @@ function LiveOrdersContent() {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => setCreateOrderDialogOpen(true)}
-            size="large"
+            size="medium"
           >
             {t('adminOrder.createOrder') || 'Create Order'}
           </Button>
