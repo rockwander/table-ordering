@@ -42,6 +42,8 @@ import { initializeNotifications, showLocalNotification, checkNotificationSuppor
 import { initializePushNotifications } from '@/lib/fcm-notifications';
 import { playNewOrderSound, playServiceCallSound, stopNotificationSound } from '@/lib/sound';
 import { Capacitor } from '@capacitor/core';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { PushNotifications } from '@capacitor/push-notifications';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 
@@ -724,12 +726,24 @@ function LiveOrdersContent() {
 
   return (
     <Box
-      onClick={() => {
+      onClick={async () => {
         // Stop any playing notification sounds when user taps anywhere
         stopNotificationSound();
-        // Also dismiss notifications if any are active
+
+        // Also dismiss in-app toast notifications if any are active
         if (activeNotifications.length > 0) {
           handleDismissAllNotifications();
+        }
+
+        // Clear all Android system notifications from notification tray
+        if (Capacitor.isNativePlatform()) {
+          try {
+            // Remove all delivered notifications from the notification tray
+            await LocalNotifications.removeAllDeliveredNotifications();
+            console.log('✅ Cleared all system notifications from tray');
+          } catch (error) {
+            console.error('Error clearing system notifications:', error);
+          }
         }
       }}
     >
