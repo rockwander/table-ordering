@@ -17,9 +17,6 @@ import {
   Divider,
   CircularProgress,
   Alert,
-  FormControlLabel,
-  Checkbox,
-  InputAdornment,
   Autocomplete,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -74,7 +71,6 @@ export default function EditOrderDialog({
   const [error, setError] = useState<string | null>(null);
 
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
-  const [applyDiscount, setApplyDiscount] = useState(true); // Default to true (10% discount applied)
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [showAddItems, setShowAddItems] = useState(false);
 
@@ -111,11 +107,6 @@ export default function EditOrderDialog({
       if (orderError) throw orderError;
 
       setOrderItems(data.order_items || []);
-
-      // Calculate if app discount was applied (default is true)
-      const expectedTotal = data.subtotal * 0.9; // With 10% discount
-      const hasAppDiscount = Math.abs(data.total - expectedTotal) < 0.01;
-      setApplyDiscount(hasAppDiscount);
     } catch (err: any) {
       console.error('Error fetching order:', err);
       setError(err.message);
@@ -189,18 +180,8 @@ export default function EditOrderDialog({
     return orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   };
 
-  const calculateDiscount = () => {
-    const subtotal = calculateSubtotal();
-
-    if (applyDiscount) {
-      return subtotal * 0.1; // 10% app discount
-    }
-
-    return 0;
-  };
-
   const calculateTotal = () => {
-    return calculateSubtotal() - calculateDiscount();
+    return calculateSubtotal(); // No discount at order level
   };
 
   const handleSave = async () => {
@@ -268,7 +249,6 @@ export default function EditOrderDialog({
 
   const handleClose = () => {
     setOrderItems([]);
-    setApplyDiscount(true); // Reset to default (discount applied)
     setShowAddItems(false);
     setError(null);
     onClose();
@@ -385,48 +365,11 @@ export default function EditOrderDialog({
 
             <Divider sx={{ my: 2 }} />
 
-            {/* Discount Options */}
-            <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-              {t('orderEdit.discounts') || 'Discounts'}
-            </Typography>
-
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={applyDiscount}
-                  onChange={(e) => {
-                    setApplyDiscount(e.target.checked);
-                  }}
-                />
-              }
-              label={t('orderEdit.applyDiscount') || 'Apply 10% Discount'}
-            />
-
-            <Divider sx={{ my: 2 }} />
-
             {/* Bill Summary */}
             <Box>
               <Typography variant="subtitle1" fontWeight={600} gutterBottom>
                 {t('orderEdit.summary') || 'Summary'}
               </Typography>
-
-              <Box display="flex" justifyContent="space-between" mb={1}>
-                <Typography variant="body2">{t('bill.subtotal') || 'Subtotal'}:</Typography>
-                <Typography variant="body2">₹{calculateSubtotal().toFixed(2)}</Typography>
-              </Box>
-
-              {calculateDiscount() > 0 && (
-                <Box display="flex" justifyContent="space-between" mb={1}>
-                  <Typography variant="body2" color="success.main">
-                    {t('liveOrders.appDiscount') || 'App Discount (10%)'}:
-                  </Typography>
-                  <Typography variant="body2" color="success.main">
-                    - ₹{calculateDiscount().toFixed(2)}
-                  </Typography>
-                </Box>
-              )}
-
-              <Divider sx={{ my: 1 }} />
 
               <Box display="flex" justifyContent="space-between">
                 <Typography variant="h6" fontWeight={700}>
