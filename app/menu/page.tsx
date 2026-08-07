@@ -984,30 +984,44 @@ function MenuContent() {
         )}
       </Container>
 
-      {/* Floating Buzzer Button */}
-      <Button
-        variant="contained"
-        size="large"
-        color={buzzerSuccess ? 'success' : 'error'}
+      {/* Floating Buzzer Button - Bookmark Style */}
+      <Box
         onClick={handleBuzzer}
-        disabled={buzzerSending}
-        startIcon={buzzerSuccess ? <CheckCircleIcon /> : <NotificationsActiveIcon />}
         sx={{
           position: 'fixed',
-          bottom: 24,
-          right: 24,
+          top: { xs: 120, sm: 100 },
+          right: 0,
           zIndex: 1000,
-          px: 3,
+          backgroundColor: buzzerSuccess ? 'success.main' : 'error.main',
+          color: 'white',
+          cursor: buzzerSending ? 'not-allowed' : 'pointer',
+          opacity: buzzerSending ? 0.7 : 1,
+          px: 2,
           py: 1.5,
-          fontSize: { xs: '0.95rem', sm: '1.1rem' },
+          fontSize: { xs: '0.85rem', sm: '0.95rem' },
           fontWeight: 700,
-          boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-          minWidth: { xs: 'auto', sm: 180 },
-          whiteSpace: 'nowrap',
+          boxShadow: '-4px 4px 12px rgba(0,0,0,0.3)',
+          borderTopLeftRadius: 8,
+          borderBottomLeftRadius: 8,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          minWidth: 140,
+          transition: 'all 0.3s ease',
+          '&:hover': {
+            transform: 'translateX(-4px)',
+            boxShadow: '-6px 6px 16px rgba(0,0,0,0.4)',
+          },
+          '&:active': {
+            transform: 'translateX(-2px)',
+          },
         }}
       >
-        {buzzerSuccess ? 'Called!' : 'Call Waiter'}
-      </Button>
+        {buzzerSuccess ? <CheckCircleIcon fontSize="small" /> : <NotificationsActiveIcon fontSize="small" />}
+        <Box component="span">
+          {buzzerSuccess ? 'Called!' : 'Call Waiter'}
+        </Box>
+      </Box>
 
       {/* Floating Place Order Button */}
       {getCartItemCount() > 0 && (
