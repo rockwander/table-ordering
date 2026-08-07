@@ -989,7 +989,7 @@ function MenuContent() {
         onClick={handleBuzzer}
         sx={{
           position: 'fixed',
-          top: { xs: 120, sm: 100 },
+          top: { xs: 80, sm: 24 },
           right: 0,
           zIndex: 1000,
           backgroundColor: buzzerSuccess ? 'success.main' : 'error.main',
