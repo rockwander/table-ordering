@@ -994,7 +994,7 @@ function MenuContent() {
         startIcon={buzzerSuccess ? <CheckCircleIcon /> : <NotificationsActiveIcon />}
         sx={{
           position: 'fixed',
-          top: { xs: 160, sm: 24 },
+          bottom: 24,
           right: 24,
           zIndex: 1000,
           px: 3,
