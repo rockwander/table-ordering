@@ -43,22 +43,28 @@ export default function StoryViewer({ category, onClose }: StoryViewerProps) {
   const stories = category?.highlight_stories || [];
   const currentStory = stories[currentIndex];
 
+  // Reset index if stories change and current index is out of bounds
   useEffect(() => {
-    if (!category || stories.length === 0) return;
+    if (stories.length > 0 && currentIndex >= stories.length) {
+      setCurrentIndex(0);
+    }
+  }, [stories.length, currentIndex]);
+
+  useEffect(() => {
+    if (!category || stories.length === 0 || !currentStory) return;
 
     // Reset progress when story changes
     setProgress(0);
 
     if (isPaused) return;
 
-    const duration = currentStory?.duration || 5000;
+    const duration = currentStory.duration || 5000;
     const progressStep = 100 / (duration / 50); // Update every 50ms
 
     // Progress bar animation
     progressInterval.current = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
-          clearInterval(progressInterval.current!);
           return 100;
         }
         return prev + progressStep;
@@ -67,14 +73,22 @@ export default function StoryViewer({ category, onClose }: StoryViewerProps) {
 
     // Auto-advance to next story
     storyTimeout.current = setTimeout(() => {
-      handleNext();
+      setCurrentIndex((prevIndex) => {
+        const nextIndex = prevIndex + 1;
+        if (nextIndex >= stories.length) {
+          // Close viewer when reaching the end
+          setTimeout(() => onClose(), 100);
+          return prevIndex;
+        }
+        return nextIndex;
+      });
     }, duration);
 
     return () => {
       if (progressInterval.current) clearInterval(progressInterval.current);
       if (storyTimeout.current) clearTimeout(storyTimeout.current);
     };
-  }, [currentIndex, category, isPaused]);
+  }, [currentIndex, category, isPaused, currentStory, stories.length]);
 
   const handleNext = () => {
     if (currentIndex < stories.length - 1) {
@@ -263,17 +277,19 @@ export default function StoryViewer({ category, onClose }: StoryViewerProps) {
         }}
       >
         {/* Story image */}
-        <Box
-          component="img"
-          src={currentStory?.image_url}
-          alt={getCaption(currentStory)}
-          sx={{
-            maxWidth: '100%',
-            maxHeight: '85vh',
-            objectFit: 'contain',
-            userSelect: 'none',
-          }}
-        />
+        {currentStory && currentStory.image_url && (
+          <Box
+            component="img"
+            src={currentStory.image_url}
+            alt={getCaption(currentStory)}
+            sx={{
+              maxWidth: '100%',
+              maxHeight: '85vh',
+              objectFit: 'contain',
+              userSelect: 'none',
+            }}
+          />
+        )}
 
         {/* Caption */}
         {currentStory && getCaption(currentStory) && (

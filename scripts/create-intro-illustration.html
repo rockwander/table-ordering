@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steps to Order - Intro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .story-card {
+            width: 390px;
+            height: 844px;
+            margin: 20px auto;
+            background: linear-gradient(135deg, #800020 0%, #A0293A 50%, #800020 100%);
+            border-radius: 20px;
+            padding: 60px 40px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .story-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 8px;
+            background: linear-gradient(90deg, #FFD700, #FFA500, #FFD700);
+        }
+
+        .story-card::after {
+            content: '';
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(255,215,0,0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            top: -100px;
+            right: -100px;
+        }
+
+        .logo-icon {
+            font-size: 100px;
+            margin-bottom: 30px;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+        }
+
+        .title {
+            font-family: 'Bree Serif', serif;
+            font-size: 52px;
+            font-weight: 400;
+            color: #FFD700;
+            line-height: 1.2;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.5);
+        }
+
+        .subtitle {
+            font-family: 'Bree Serif', serif;
+            font-size: 36px;
+            font-weight: 400;
+            color: #FFF8DC;
+            margin-bottom: 40px;
+            text-shadow: 1px 1px 4px rgba(0,0,0,0.3);
+        }
+
+        .brand-box {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px 45px;
+            border-radius: 50px;
+            margin-top: 40px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        }
+
+        .brand-name {
+            font-family: 'Bree Serif', serif;
+            font-size: 36px;
+            font-weight: 400;
+            color: #800020;
+            letter-spacing: 1px;
+        }
+
+        .tagline {
+            font-family: 'Bree Serif', serif;
+            font-size: 18px;
+            color: #800020;
+            margin-top: 8px;
+            font-weight: 400;
+        }
+
+        .decorative-line {
+            width: 200px;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, #FFF8DC, transparent);
+            margin: 30px auto;
+            border-radius: 2px;
+        }
+
+        .step-count {
+            position: absolute;
+            bottom: 50px;
+            left: 0;
+            right: 0;
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 600;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .gujarati-text {
+            font-size: 28px;
+            color: #FFF8DC;
+            margin-top: 20px;
+            font-weight: 700;
+            text-shadow: 1px 1px 4px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <!-- Intro: Steps to Order -->
+    <div class="story-card" id="intro">
+        <div class="logo-icon">🍽️</div>
+
+        <div class="title">
+            Steps to Order
+        </div>
+
+        <div class="gujarati-text">
+            ઓર્ડર કરવાના પગલાં
+        </div>
+
+        <div class="decorative-line"></div>
+
+        <div class="subtitle">
+            at
+        </div>
+
+        <div class="brand-box">
+            <div class="brand-name">RAMANI'S CAFE</div>
+            <div class="tagline">Authentic South Indian Cafe</div>
+        </div>
+
+        <div class="step-count">
+            📱 Easy ordering in 6 simple steps
+        </div>
+    </div>
+</body>
+</html>

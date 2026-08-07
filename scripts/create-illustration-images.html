@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steps Illustrations</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .story-card {
+            width: 390px;
+            height: 844px;
+            margin: 20px auto;
+            background: linear-gradient(135deg, #FFF8E7 0%, #FFE5B4 100%);
+            border-radius: 20px;
+            padding: 60px 40px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .story-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, #D2691E, #CD853F, #D2691E);
+        }
+
+        .step-number {
+            font-size: 80px;
+            font-weight: 800;
+            color: #D2691E;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .icon {
+            font-size: 120px;
+            margin-bottom: 40px;
+        }
+
+        .main-text {
+            font-size: 32px;
+            font-weight: 700;
+            color: #2C1810;
+            line-height: 1.4;
+            margin-bottom: 20px;
+        }
+
+        .sub-text {
+            font-size: 20px;
+            color: #5C4033;
+            line-height: 1.6;
+            font-weight: 500;
+        }
+
+        .gujarati-text {
+            font-size: 24px;
+            color: #5C4033;
+            margin-top: 30px;
+            font-weight: 600;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 40px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: #8B6914;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        /* Step 3 specific */
+        #step3 {
+            background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+        }
+
+        #step3::before {
+            background: linear-gradient(90deg, #4CAF50, #66BB6A, #4CAF50);
+        }
+
+        #step3 .step-number {
+            color: #2E7D32;
+        }
+
+        #step3 .main-text {
+            color: #1B5E20;
+        }
+
+        #step3 .sub-text,
+        #step3 .gujarati-text {
+            color: #33691E;
+        }
+
+        #step3 .footer {
+            color: #558B2F;
+        }
+
+        /* Step 6 specific */
+        #step6 {
+            background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%);
+        }
+
+        #step6::before {
+            background: linear-gradient(90deg, #FF6F00, #FF8F00, #FF6F00);
+        }
+
+        #step6 .step-number {
+            color: #E65100;
+        }
+
+        #step6 .main-text {
+            color: #BF360C;
+        }
+
+        #step6 .sub-text,
+        #step6 .gujarati-text {
+            color: #D84315;
+        }
+
+        #step6 .footer {
+            color: #F57C00;
+        }
+
+        .divider {
+            width: 60%;
+            height: 3px;
+            background: rgba(0,0,0,0.1);
+            margin: 30px auto;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Step 3: Staff Confirmation -->
+    <div class="story-card" id="step3">
+        <div class="step-number">3</div>
+        <div class="icon">👨‍🍳✓</div>
+        <div class="main-text">
+            Staff confirms<br>your order<br>in person
+        </div>
+        <div class="divider"></div>
+        <div class="sub-text">
+            Our team will verify<br>your order at the table
+        </div>
+        <div class="gujarati-text">
+            સ્ટાફ તમારા ઓર્ડરની<br>રૂબરૂ પુષ્ટિ કરે છે
+        </div>
+        <div class="footer">RAMANI'S CAFE</div>
+    </div>
+
+    <!-- Step 6: Pay at Counter -->
+    <div class="story-card" id="step6">
+        <div class="step-number">6</div>
+        <div class="icon">💳🏪</div>
+        <div class="main-text">
+            Pay at the<br>counter<br>when ready
+        </div>
+        <div class="divider"></div>
+        <div class="sub-text">
+            Complete payment<br>at the billing counter
+        </div>
+        <div class="gujarati-text">
+            તૈયાર થાઓ ત્યારે<br>કાઉન્ટર પર ચૂકવો
+        </div>
+        <div class="footer">RAMANI'S CAFE</div>
+    </div>
+
+    <script>
+        // Instructions to take screenshots:
+        console.log("To capture these as images:");
+        console.log("1. Open this HTML file in a browser");
+        console.log("2. Right-click on each card");
+        console.log("3. Take a screenshot of just the card (390x844)");
+        console.log("4. Save as step3-illustration.png and step6-illustration.png");
+    </script>
+</body>
+</html>

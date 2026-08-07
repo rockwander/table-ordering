@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image with Text Overlay</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
+        }
+
+        .story-container {
+            width: 390px;
+            height: 844px;
+            margin: 0 auto;
+            position: relative;
+            overflow: hidden;
+            background: #000;
+        }
+
+        .background-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                to bottom,
+                rgba(0,0,0,0.6) 0%,
+                rgba(0,0,0,0.1) 30%,
+                rgba(0,0,0,0) 50%
+            );
+        }
+
+        .text-overlay {
+            position: absolute;
+            top: 60px;
+            left: 20px;
+            right: 20px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        .main-text {
+            font-family: 'Bree Serif', serif;
+            font-size: 32px;
+            font-weight: 400;
+            color: #FFFFFF;
+            line-height: 1.4;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.8),
+                         0 4px 16px rgba(0,0,0,0.6);
+            padding: 20px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+        }
+
+        .progress-bars {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            gap: 4px;
+            z-index: 20;
+        }
+
+        .progress-bar {
+            flex: 1;
+            height: 3px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 2px;
+        }
+
+        .progress-bar.active {
+            background: rgba(255,255,255,0.9);
+        }
+    </style>
+</head>
+<body>
+    <div class="story-container" id="story">
+        <!-- Background Image -->
+        <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+             class="background-image"
+             alt="Background"
+             id="bgImage">
+
+        <!-- Dark overlay gradient -->
+        <div class="overlay"></div>
+
+        <!-- Progress bars (Instagram style) -->
+        <div class="progress-bars">
+            <div class="progress-bar active"></div>
+            <div class="progress-bar"></div>
+            <div class="progress-bar"></div>
+        </div>
+
+        <!-- Text overlay -->
+        <div class="text-overlay">
+            <div class="main-text">
+                Fresh spoons and glasses,<br>
+                stocked for your next meal
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Note: This is a template. To use with your actual image:
+        // 1. The image will be loaded via Puppeteer
+        // 2. Or you can replace the src with your actual image path
+        console.log('Template ready for image overlay generation');
+    </script>
+</body>
+</html>
