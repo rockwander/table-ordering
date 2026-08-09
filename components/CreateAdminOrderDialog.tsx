@@ -169,7 +169,7 @@ export default function CreateAdminOrderDialog({
 
     try {
       const subtotal = calculateTotal();
-      const total = subtotal * 0.9; // 10% discount applied
+      const total = subtotal; // No discount at order level - discounts only apply to bills
 
       // Create order with table_number = NULL for admin orders
       const { data: orderData, error: orderError } = await supabase
@@ -365,27 +365,17 @@ export default function CreateAdminOrderDialog({
 
               {/* Cart Summary */}
               <Box>
-                <Box display="flex" justifyContent="space-between" mb={1}>
-                  <Typography variant="body2">{t('bill.subtotal') || 'Subtotal'}:</Typography>
-                  <Typography variant="body2">₹{calculateTotal().toFixed(2)}</Typography>
-                </Box>
-                <Box display="flex" justifyContent="space-between" mb={1}>
-                  <Typography variant="body2" color="success.main">
-                    {t('liveOrders.appDiscount') || 'Discount (10%)'}:
-                  </Typography>
-                  <Typography variant="body2" color="success.main">
-                    - ₹{(calculateTotal() * 0.1).toFixed(2)}
-                  </Typography>
-                </Box>
-                <Divider sx={{ my: 1 }} />
                 <Box display="flex" justifyContent="space-between">
                   <Typography variant="h6" fontWeight={700}>
                     {t('bill.total') || 'Total'}:
                   </Typography>
                   <Typography variant="h6" fontWeight={700} color="primary">
-                    ₹{(calculateTotal() * 0.9).toFixed(2)}
+                    ₹{calculateTotal().toFixed(2)}
                   </Typography>
                 </Box>
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                  Note: Discounts are applied at bill settlement, not on individual orders
+                </Typography>
               </Box>
             </Grid>
           </Grid>
