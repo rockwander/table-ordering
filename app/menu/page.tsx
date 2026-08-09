@@ -69,6 +69,7 @@ function MenuContent() {
   const [selectedHighlight, setSelectedHighlight] = useState<HighlightCategory | null>(null);
   const [currentVisibleCategory, setCurrentVisibleCategory] = useState<string | null>(null);
   const [showStickyCategory, setShowStickyCategory] = useState(false);
+  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
 
   const { cartItems, addToCart, updateQuantity, removeFromCart, getCartItemCount } = useCart();
 
@@ -258,25 +259,6 @@ function MenuContent() {
     }
   };
 
-  const handleJumpToNextCategory = () => {
-    if (!currentVisibleCategory) return;
-
-    const currentIndex = categories.findIndex(cat => cat.id === currentVisibleCategory);
-    const nextIndex = (currentIndex + 1) % categories.length;
-    const nextCategory = categories[nextIndex];
-
-    if (nextCategory) {
-      const nextElement = document.querySelector(`[data-category-section="${nextCategory.id}"]`);
-      if (nextElement) {
-        const elementTop = nextElement.getBoundingClientRect().top + window.scrollY;
-        window.scrollTo({
-          top: elementTop - 150, // Offset for sticky header
-          behavior: 'smooth'
-        });
-      }
-    }
-  };
-
   if (!tableNumber) {
     return null;
   }
@@ -305,37 +287,116 @@ function MenuContent() {
         outstandingTotal={outstandingTotal}
       />
 
-      {/* Sticky Category Header */}
+      {/* Sticky Category Header with Dropdown */}
       {showStickyCategory && currentVisibleCategory && (
-        <Box
-          onClick={handleJumpToNextCategory}
-          sx={{
-            position: 'fixed',
-            top: 64, // Below header
-            left: 0,
-            right: 0,
-            zIndex: 900, // Below Call Waiter (1000) and StoryViewer (9999)
-            backgroundColor: 'primary.main',
-            color: 'white',
-            py: 1.5,
-            px: 3,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-            cursor: 'pointer',
-            transition: 'all 0.3s ease',
-            '&:active': {
-              transform: 'scale(0.98)',
-            },
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', maxWidth: 'lg', mx: 'auto' }}>
-            <Typography variant="h6" fontWeight={700}>
+        <>
+          <Box
+            onClick={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
+            sx={{
+              position: 'fixed',
+              top: 64, // Below header
+              left: 16,
+              right: 180, // Leave space for Call Waiter button
+              zIndex: 900, // Below Call Waiter (1000) and StoryViewer (9999)
+              backgroundColor: 'primary.main',
+              color: 'white',
+              py: 1.5,
+              px: 2,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              borderRadius: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              '&:active': {
+                transform: 'scale(0.98)',
+              },
+            }}
+          >
+            <Typography variant="body1" fontWeight={700} sx={{ fontSize: '0.95rem' }}>
               {categories.find(cat => cat.id === currentVisibleCategory)?.name || ''}
             </Typography>
-            <Typography variant="body2" sx={{ opacity: 0.9, fontSize: '0.85rem' }}>
-              Tap to skip to next →
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.75rem' }}>
+                {categoryDropdownOpen ? '▲' : '▼'}
+              </Typography>
+            </Box>
           </Box>
-        </Box>
+
+          {/* Dropdown Menu */}
+          {categoryDropdownOpen && (
+            <>
+              {/* Backdrop to close dropdown */}
+              <Box
+                onClick={() => setCategoryDropdownOpen(false)}
+                sx={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 899,
+                }}
+              />
+
+              {/* Dropdown List */}
+              <Box
+                sx={{
+                  position: 'fixed',
+                  top: 116, // Below sticky header
+                  left: 16,
+                  right: 180,
+                  zIndex: 900,
+                  backgroundColor: 'white',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                  borderRadius: 1,
+                  maxHeight: '60vh',
+                  overflowY: 'auto',
+                }}
+              >
+                {categories.map((category) => (
+                  <Box
+                    key={category.id}
+                    onClick={() => {
+                      const element = document.querySelector(`[data-category-section="${category.id}"]`);
+                      if (element) {
+                        const elementTop = element.getBoundingClientRect().top + window.scrollY;
+                        window.scrollTo({
+                          top: elementTop - 150,
+                          behavior: 'smooth'
+                        });
+                      }
+                      setCategoryDropdownOpen(false);
+                    }}
+                    sx={{
+                      py: 2,
+                      px: 2,
+                      borderBottom: '1px solid',
+                      borderColor: 'divider',
+                      cursor: 'pointer',
+                      backgroundColor: category.id === currentVisibleCategory ? 'primary.light' : 'white',
+                      '&:hover': {
+                        backgroundColor: category.id === currentVisibleCategory ? 'primary.light' : 'grey.100',
+                      },
+                      '&:last-child': {
+                        borderBottom: 'none',
+                      },
+                    }}
+                  >
+                    <Typography
+                      variant="body1"
+                      fontWeight={category.id === currentVisibleCategory ? 700 : 400}
+                      color={category.id === currentVisibleCategory ? 'primary.main' : 'text.primary'}
+                    >
+                      {category.name}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            </>
+          )}
+        </>
       )}
 
       <Container maxWidth="lg" sx={{ py: 3 }}>
