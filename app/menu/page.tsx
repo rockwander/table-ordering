@@ -67,6 +67,8 @@ function MenuContent() {
   const [buzzerSuccess, setBuzzerSuccess] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedHighlight, setSelectedHighlight] = useState<HighlightCategory | null>(null);
+  const [currentVisibleCategory, setCurrentVisibleCategory] = useState<string | null>(null);
+  const [showStickyCategory, setShowStickyCategory] = useState(false);
 
   const { cartItems, addToCart, updateQuantity, removeFromCart, getCartItemCount } = useCart();
 
@@ -78,6 +80,42 @@ function MenuContent() {
     fetchMenuData();
     fetchOutstandingOrders();
   }, [tableNumber, router]);
+
+  // Scroll detection for sticky category header
+  useEffect(() => {
+    if (selectedCategory !== 'all') {
+      setShowStickyCategory(false);
+      return;
+    }
+
+    const handleScroll = () => {
+      const categoryElements = document.querySelectorAll('[data-category-section]');
+      const scrollPosition = window.scrollY + 200; // Offset for header
+
+      let foundCategory: string | null = null;
+
+      categoryElements.forEach((element) => {
+        const rect = element.getBoundingClientRect();
+        const elementTop = rect.top + window.scrollY;
+
+        if (scrollPosition >= elementTop && scrollPosition < elementTop + rect.height) {
+          foundCategory = element.getAttribute('data-category-section');
+        }
+      });
+
+      if (foundCategory) {
+        setCurrentVisibleCategory(foundCategory);
+        setShowStickyCategory(true);
+      } else if (window.scrollY < 400) {
+        setShowStickyCategory(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll(); // Check initial position
+
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [selectedCategory]);
 
   const fetchMenuData = async () => {
     try {
@@ -220,6 +258,25 @@ function MenuContent() {
     }
   };
 
+  const handleJumpToNextCategory = () => {
+    if (!currentVisibleCategory) return;
+
+    const currentIndex = categories.findIndex(cat => cat.id === currentVisibleCategory);
+    const nextIndex = (currentIndex + 1) % categories.length;
+    const nextCategory = categories[nextIndex];
+
+    if (nextCategory) {
+      const nextElement = document.querySelector(`[data-category-section="${nextCategory.id}"]`);
+      if (nextElement) {
+        const elementTop = nextElement.getBoundingClientRect().top + window.scrollY;
+        window.scrollTo({
+          top: elementTop - 150, // Offset for sticky header
+          behavior: 'smooth'
+        });
+      }
+    }
+  };
+
   if (!tableNumber) {
     return null;
   }
@@ -247,6 +304,39 @@ function MenuContent() {
         outstandingOrdersCount={outstandingOrdersCount}
         outstandingTotal={outstandingTotal}
       />
+
+      {/* Sticky Category Header */}
+      {showStickyCategory && currentVisibleCategory && (
+        <Box
+          onClick={handleJumpToNextCategory}
+          sx={{
+            position: 'fixed',
+            top: 64, // Below header
+            left: 0,
+            right: 0,
+            zIndex: 900, // Below Call Waiter (1000) and StoryViewer (9999)
+            backgroundColor: 'primary.main',
+            color: 'white',
+            py: 1.5,
+            px: 3,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+            cursor: 'pointer',
+            transition: 'all 0.3s ease',
+            '&:active': {
+              transform: 'scale(0.98)',
+            },
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', maxWidth: 'lg', mx: 'auto' }}>
+            <Typography variant="h6" fontWeight={700}>
+              {categories.find(cat => cat.id === currentVisibleCategory)?.name || ''}
+            </Typography>
+            <Typography variant="body2" sx={{ opacity: 0.9, fontSize: '0.85rem' }}>
+              Tap to skip to next →
+            </Typography>
+          </Box>
+        </Box>
+      )}
 
       <Container maxWidth="lg" sx={{ py: 3 }}>
         {/* Story Highlights */}
@@ -513,7 +603,7 @@ function MenuContent() {
             <>
               {/* Top 5 from each category */}
               {top5ByCategory.map(({ category, items }) => (
-                <Box key={category.id} sx={{ mb: 4 }}>
+                <Box key={category.id} sx={{ mb: 4 }} data-category-section={category.id}>
                   {/* Category Header */}
                   <Typography
                     variant="h5"
