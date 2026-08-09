@@ -314,11 +314,11 @@ function MenuContent() {
               },
             }}
           >
-            <Typography variant="body1" fontWeight={700} sx={{ fontSize: '0.95rem' }}>
+            <Typography variant="body1" fontWeight={700} sx={{ fontSize: '0.95rem', color: 'white' }}>
               {categories.find(cat => cat.id === currentVisibleCategory)?.name || ''}
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.75rem' }}>
+              <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.75rem', color: 'white' }}>
                 {categoryDropdownOpen ? '▲' : '▼'}
               </Typography>
             </Box>
