@@ -375,9 +375,9 @@ function MenuContent() {
                       borderBottom: '1px solid',
                       borderColor: 'divider',
                       cursor: 'pointer',
-                      backgroundColor: category.id === currentVisibleCategory ? 'primary.light' : 'white',
+                      backgroundColor: category.id === currentVisibleCategory ? 'primary.main' : 'white',
                       '&:hover': {
-                        backgroundColor: category.id === currentVisibleCategory ? 'primary.light' : 'grey.100',
+                        backgroundColor: category.id === currentVisibleCategory ? 'primary.main' : 'grey.100',
                       },
                       '&:last-child': {
                         borderBottom: 'none',
@@ -387,7 +387,9 @@ function MenuContent() {
                     <Typography
                       variant="body1"
                       fontWeight={category.id === currentVisibleCategory ? 700 : 400}
-                      color={category.id === currentVisibleCategory ? 'primary.main' : 'text.primary'}
+                      sx={{
+                        color: category.id === currentVisibleCategory ? 'white' : 'text.primary'
+                      }}
                     >
                       {category.name}
                     </Typography>
