@@ -338,11 +338,13 @@ function LiveOrdersContent() {
 
       // Process unpaid orders - group by table (these are DRAFT bills, no bill_id yet)
       unpaidOrders.forEach((order: any) => {
-        const key = `${order.table_number}-active`;
+        // Handle admin orders (table_number = null) specially
+        const tableKey = order.table_number !== null ? order.table_number : 'admin';
+        const key = `${tableKey}-active`;
 
         if (!billsMap.has(key)) {
           billsMap.set(key, {
-            bill_id: `draft-${order.table_number}`,
+            bill_id: `draft-${tableKey}`,
             display_bill_id: 0, // 0 means draft/unsettled
             table_number: order.table_number,
             orders: [],
@@ -512,7 +514,8 @@ function LiveOrdersContent() {
   };
 
   const handleSettleBill = async (bill: Bill) => {
-    if (!confirm(`Settle bill for Table ${bill.table_number}?`)) {
+    const tableLabel = bill.table_number ? `Table ${bill.table_number}` : 'Admin Order';
+    if (!confirm(`Settle bill for ${tableLabel}?`)) {
       return;
     }
 
@@ -592,7 +595,8 @@ function LiveOrdersContent() {
   };
 
   const handleDeleteBill = async (bill: Bill) => {
-    if (!confirm(`Are you sure you want to delete this bill for Table ${bill.table_number}? This will delete all orders in this bill.`)) {
+    const tableLabel = bill.table_number ? `Table ${bill.table_number}` : 'Admin Order';
+    if (!confirm(`Are you sure you want to delete this bill for ${tableLabel}? This will delete all orders in this bill.`)) {
       return;
     }
 
