@@ -210,21 +210,21 @@ function MenuContent() {
     }
   };
 
-  // Group top 5 items per category for "All Items" view
-  // Include ALL items (including top-selling) in the top 5 of each category
-  const top5ByCategory = selectedCategory === 'all'
+  // Group ALL items per category for "All Items" view
+  // Show all items in each category (no limit)
+  const itemsByCategory = selectedCategory === 'all'
     ? categories.map(category => ({
         category,
         items: filteredItems
           .filter(item => item.category_id === category.id)
-          .slice(0, 5), // Take only top 5, including top-selling items
+          // No slice - show all items
       })).filter(group => group.items.length > 0)
     : [];
 
-  // Regular items for "All Items" complete list (exclude top-selling)
-  const regularItems = selectedCategory === 'all'
-    ? filteredItems.filter(item => !item.is_top_selling)
-    : filteredItems;
+  // Regular items for filtered category views
+  const regularItems = selectedCategory !== 'all'
+    ? filteredItems
+    : [];
 
   const handleBuzzer = async () => {
     if (buzzerSending || !tableNumber) return;
@@ -659,11 +659,11 @@ function MenuContent() {
             </Box>
           )}
 
-          {/* Regular Items - Top 5 per Category + Complete List in All Items view */}
+          {/* Regular Items - All items per category */}
           {selectedCategory === 'all' ? (
             <>
-              {/* Top 5 from each category */}
-              {top5ByCategory.map(({ category, items }) => (
+              {/* All items from each category */}
+              {itemsByCategory.map(({ category, items }) => (
                 <Box key={category.id} sx={{ mb: 4 }} data-category-section={category.id}>
                   {/* Category Header */}
                   <Typography
@@ -679,7 +679,7 @@ function MenuContent() {
                     {category.name}
                   </Typography>
 
-                  {/* Category Items Grid - Top 5 only */}
+                  {/* Category Items Grid - All items */}
                   <Box
                     sx={{
                       display: 'grid',
@@ -822,164 +822,6 @@ function MenuContent() {
                   </Box>
                 </Box>
               ))}
-
-              {/* Complete list of all regular items */}
-              {regularItems.length > 0 && (
-                <Box sx={{ mt: 6 }}>
-                  <Typography
-                    variant="h5"
-                    fontWeight={700}
-                    sx={{
-                      mb: 2,
-                      p: 2,
-                      bgcolor: 'grey.100',
-                      borderRadius: 1
-                    }}
-                  >
-                    All Items
-                  </Typography>
-                  <Box
-                    sx={{
-                      display: 'grid',
-                      gridTemplateColumns: {
-                        xs: '1fr',
-                        sm: 'repeat(2, 1fr)',
-                        md: 'repeat(3, 1fr)',
-                      },
-                      gap: 3,
-                    }}
-                  >
-                    {regularItems.map((item) => (
-                      <Card
-                        key={item.id}
-                        sx={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          height: '100%',
-                          maxWidth: 360,
-                          mx: 'auto',
-                          width: '100%',
-                        }}
-                      >
-                        {item.image_url && (
-                          <CardMedia
-                            component="img"
-                            height="140"
-                            image={item.image_url}
-                            alt={item.name}
-                            sx={{ objectFit: 'cover', objectPosition: 'center' }}
-                          />
-                        )}
-                        <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 2 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'start', gap: 1, mb: 1, minWidth: 0 }}>
-                            <Typography
-                              variant="h6"
-                              component="div"
-                              sx={{
-                                flexGrow: 1,
-                                fontSize: '1rem',
-                                fontWeight: 600,
-                                lineHeight: 1.3,
-                                minWidth: 0,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                display: '-webkit-box',
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: 'vertical',
-                                wordBreak: 'break-word',
-                              }}
-                            >
-                              {item.name}
-                            </Typography>
-                            {item.is_vegetarian && (
-                              <Chip
-                                icon={<CheckCircleIcon />}
-                                label="Veg"
-                                size="small"
-                                color="success"
-                                sx={{ height: 24, flexShrink: 0 }}
-                              />
-                            )}
-                          </Box>
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{
-                              mb: 2,
-                              flexGrow: 1,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                              minHeight: '2.5rem',
-                            }}
-                          >
-                            {item.description || '\u00A0'}
-                          </Typography>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 'auto', gap: 1 }}>
-                            <Typography variant="h6" color="primary" fontWeight={700} sx={{ whiteSpace: 'nowrap' }}>
-                              ₹{item.price.toFixed(2)}
-                            </Typography>
-                            {getItemQuantityInCart(item.id) === 0 ? (
-                              <Button
-                                variant="contained"
-                                size="small"
-                                startIcon={<AddIcon />}
-                                onClick={() => addToCart(item, 1)}
-                                sx={{ flexShrink: 0 }}
-                              >
-                                Add
-                              </Button>
-                            ) : (
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
-                                <IconButton
-                                  size="small"
-                                  onClick={() => handleQuantityChange(item, getItemQuantityInCart(item.id) - 1)}
-                                  color="primary"
-                                  sx={{
-                                    bgcolor: 'primary.main',
-                                    color: 'white',
-                                    '&:hover': { bgcolor: 'primary.dark' },
-                                    width: 28,
-                                    height: 28,
-                                  }}
-                                >
-                                  <RemoveIcon fontSize="small" />
-                                </IconButton>
-                                <Typography
-                                  variant="body1"
-                                  sx={{
-                                    minWidth: 32,
-                                    textAlign: 'center',
-                                    fontWeight: 600,
-                                  }}
-                                >
-                                  {getItemQuantityInCart(item.id)}
-                                </Typography>
-                                <IconButton
-                                  size="small"
-                                  onClick={() => handleQuantityChange(item, getItemQuantityInCart(item.id) + 1)}
-                                  color="primary"
-                                  sx={{
-                                    bgcolor: 'primary.main',
-                                    color: 'white',
-                                    '&:hover': { bgcolor: 'primary.dark' },
-                                    width: 28,
-                                    height: 28,
-                                  }}
-                                >
-                                  <AddIcon fontSize="small" />
-                                </IconButton>
-                              </Box>
-                            )}
-                          </Box>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </Box>
-                </Box>
-              )}
             </>
           ) : (
             /* Regular Items - Flat view for specific categories */
