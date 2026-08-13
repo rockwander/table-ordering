@@ -814,15 +814,6 @@ function LiveOrdersContent() {
     bill.orders.some(order => order.status !== 'paid')
   ).length;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const pastBillsCount = bills.filter(bill => {
-    const billDate = new Date(bill.created_at);
-    billDate.setHours(0, 0, 0, 0);
-    return bill.orders.every(order => order.status === 'paid') &&
-           billDate.getTime() === today.getTime();
-  }).length;
-
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
@@ -926,19 +917,7 @@ function LiveOrdersContent() {
               </Box>
             }
           />
-          <Tab
-            label={
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                {t('liveOrders.pastBills')}
-                <Chip
-                  label={pastBillsCount}
-                  size="small"
-                  color="default"
-                  sx={{ fontWeight: 700, minWidth: 28 }}
-                />
-              </Box>
-            }
-          />
+          <Tab label={t('liveOrders.pastBills')} />
         </Tabs>
       </Box>
 
