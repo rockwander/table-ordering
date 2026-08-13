@@ -792,6 +792,37 @@ function LiveOrdersContent() {
 
   const filteredBills = getFilteredBills();
 
+  // Calculate counts for each tab
+  const newOrdersCount = bills.filter(bill =>
+    bill.orders.some(order =>
+      order.status !== 'ready' &&
+      order.status !== 'served' &&
+      order.status !== 'bill_requested' &&
+      order.status !== 'paid'
+    )
+  ).reduce((count, bill) => {
+    // Count individual orders that are not complete
+    return count + bill.orders.filter(order =>
+      order.status !== 'ready' &&
+      order.status !== 'served' &&
+      order.status !== 'bill_requested' &&
+      order.status !== 'paid'
+    ).length;
+  }, 0);
+
+  const settleBillCount = bills.filter(bill =>
+    bill.orders.some(order => order.status !== 'paid')
+  ).length;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const pastBillsCount = bills.filter(bill => {
+    const billDate = new Date(bill.created_at);
+    billDate.setHours(0, 0, 0, 0);
+    return bill.orders.every(order => order.status === 'paid') &&
+           billDate.getTime() === today.getTime();
+  }).length;
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
@@ -869,9 +900,45 @@ function LiveOrdersContent() {
       {/* Tabs */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={selectedTab} onChange={(_, v) => setSelectedTab(v)}>
-          <Tab label={t('liveOrders.newOrders')} />
-          <Tab label={t('liveOrders.settleBill')} />
-          <Tab label={t('liveOrders.pastBills')} />
+          <Tab
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {t('liveOrders.newOrders')}
+                <Chip
+                  label={newOrdersCount}
+                  size="small"
+                  color={newOrdersCount > 0 ? "error" : "default"}
+                  sx={{ fontWeight: 700, minWidth: 28 }}
+                />
+              </Box>
+            }
+          />
+          <Tab
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {t('liveOrders.settleBill')}
+                <Chip
+                  label={settleBillCount}
+                  size="small"
+                  color={settleBillCount > 0 ? "warning" : "default"}
+                  sx={{ fontWeight: 700, minWidth: 28 }}
+                />
+              </Box>
+            }
+          />
+          <Tab
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {t('liveOrders.pastBills')}
+                <Chip
+                  label={pastBillsCount}
+                  size="small"
+                  color="default"
+                  sx={{ fontWeight: 700, minWidth: 28 }}
+                />
+              </Box>
+            }
+          />
         </Tabs>
       </Box>
 
