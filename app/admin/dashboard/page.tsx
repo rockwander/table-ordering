@@ -38,9 +38,9 @@ import { PushNotifications } from '@capacitor/push-notifications';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface Stats {
-  todayOrders: number;
+  todayBills: number;
   todayRevenue: number;
-  monthOrders: number;
+  monthBills: number;
   monthRevenue: number;
 }
 
@@ -185,9 +185,9 @@ function DashboardContent() {
   const [isAppActive, setIsAppActive] = useState(true);
   const [systemStatusOpen, setSystemStatusOpen] = useState(false);
   const [stats, setStats] = useState<Stats>({
-    todayOrders: 0,
+    todayBills: 0,
     todayRevenue: 0,
-    monthOrders: 0,
+    monthBills: 0,
     monthRevenue: 0,
   });
   const [weeklyData, setWeeklyData] = useState<ChartData[]>([]);
@@ -275,28 +275,22 @@ function DashboardContent() {
       const todayBills = allBills.filter(bill =>
         new Date(bill.settled_at) >= today
       );
-      const todayOrders = allOrders.filter(order =>
-        new Date(order.created_at) >= today
-      );
 
-      const todayOrdersCount = todayOrders.length || 0;
+      const todayBillsCount = todayBills.length || 0;
       const todayRevenue = todayBills.reduce((sum, bill) => sum + bill.total, 0) || 0;
 
       // Calculate month's stats
       const monthBills = allBills.filter(bill =>
         new Date(bill.settled_at) >= monthStart
       );
-      const monthOrders = allOrders.filter(order =>
-        new Date(order.created_at) >= monthStart
-      );
 
-      const monthOrdersCount = monthOrders.length || 0;
+      const monthBillsCount = monthBills.length || 0;
       const monthRevenue = monthBills.reduce((sum, bill) => sum + bill.total, 0) || 0;
 
       setStats({
-        todayOrders: todayOrdersCount,
+        todayBills: todayBillsCount,
         todayRevenue,
-        monthOrders: monthOrdersCount,
+        monthBills: monthBillsCount,
         monthRevenue,
       });
 
@@ -530,18 +524,18 @@ function DashboardContent() {
 
       {/* Analytics Cards */}
       <Grid container spacing={3}>
-        {/* Today's Orders */}
+        {/* Today's Bills */}
         <Grid item xs={12} sm={6} md={3}>
           <Card sx={{ height: '100%' }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <ReceiptLongIcon color="primary" sx={{ mr: 1, fontSize: 28 }} />
                 <Typography variant="body2" color="text.secondary">
-                  Today's Orders
+                  Today's Bills
                 </Typography>
               </Box>
               <Typography variant="h4" fontWeight={700}>
-                {stats.todayOrders}
+                {stats.todayBills}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                 {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
@@ -570,18 +564,18 @@ function DashboardContent() {
           </Card>
         </Grid>
 
-        {/* Monthly Orders */}
+        {/* Monthly Bills */}
         <Grid item xs={12} sm={6} md={3}>
           <Card sx={{ height: '100%' }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <CalendarMonthIcon color="info" sx={{ mr: 1, fontSize: 28 }} />
                 <Typography variant="body2" color="text.secondary">
-                  Monthly Orders
+                  Monthly Bills
                 </Typography>
               </Box>
               <Typography variant="h4" fontWeight={700} sx={{ color: 'info.main' }}>
-                {stats.monthOrders}
+                {stats.monthBills}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                 {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
