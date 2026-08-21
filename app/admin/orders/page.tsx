@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -70,32 +70,88 @@ interface OrderWithItems extends Order {
   }>;
 }
 
+const PAGE_SIZE = 20;
+
 function OrdersContent() {
   const router = useRouter();
   const [orders, setOrders] = useState<OrderWithItems[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(0);
   const [filterTable, setFilterTable] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchDate, setSearchDate] = useState<string>('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<OrderWithItems | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const observerTarget = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetchOrders();
+    fetchOrders(true);
 
-    // Subscribe to real-time order updates
+    // Subscribe to real-time order updates (only for new orders, not refetch all)
     const ordersChannel = supabase
       .channel('orders-history')
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'orders',
         },
-        () => {
-          fetchOrders();
+        async (payload) => {
+          // Fetch the new order with its items
+          const { data, error } = await supabase
+            .from('orders')
+            .select(`
+              *,
+              order_items (*)
+            `)
+            .eq('id', payload.new.id)
+            .single();
+
+          if (!error && data) {
+            setOrders(prevOrders => [data, ...prevOrders]);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'orders',
+        },
+        async (payload) => {
+          // Update the order in the list
+          const { data, error } = await supabase
+            .from('orders')
+            .select(`
+              *,
+              order_items (*)
+            `)
+            .eq('id', payload.new.id)
+            .single();
+
+          if (!error && data) {
+            setOrders(prevOrders =>
+              prevOrders.map(order => order.id === data.id ? data : order)
+            );
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'orders',
+        },
+        (payload) => {
+          setOrders(prevOrders =>
+            prevOrders.filter(order => order.id !== payload.old.id)
+          );
         }
       )
       .subscribe();
@@ -105,71 +161,132 @@ function OrdersContent() {
     };
   }, []);
 
-  const fetchOrders = async () => {
-    try {
-      setLoading(true);
+  // Reset pagination when filters change
+  useEffect(() => {
+    setPage(0);
+    setHasMore(true);
+    fetchOrders(true);
+  }, [filterTable, filterStatus, searchDate]);
 
-      const { data, error } = await supabase
+  // Infinite scroll observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => {
+      if (observerTarget.current) {
+        observer.unobserve(observerTarget.current);
+      }
+    };
+  }, [hasMore, loading, loadingMore]);
+
+  const fetchOrders = async (reset = false) => {
+    try {
+      if (reset) {
+        setLoading(true);
+        setPage(0);
+      } else {
+        setLoadingMore(true);
+      }
+
+      const currentPage = reset ? 0 : page;
+      const from = currentPage * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
+      let query = supabase
         .from('orders')
         .select(`
           *,
           order_items (*)
-        `)
+        `, { count: 'exact' })
         .order('created_at', { ascending: false })
-        .limit(100); // Show last 100 orders
+        .range(from, to);
+
+      // Apply filters
+      if (filterTable !== 'all') {
+        query = query.eq('table_number', filterTable);
+      }
+
+      if (filterStatus !== 'all') {
+        query = query.eq('status', filterStatus);
+      }
+
+      if (searchDate) {
+        const searchDateTime = new Date(searchDate);
+        searchDateTime.setHours(0, 0, 0, 0);
+        const nextDay = new Date(searchDateTime);
+        nextDay.setDate(nextDay.getDate() + 1);
+
+        query = query
+          .gte('created_at', searchDateTime.toISOString())
+          .lt('created_at', nextDay.toISOString());
+      }
+
+      const { data, error, count } = await query;
 
       if (error) throw error;
 
-      setOrders(data || []);
+      if (reset) {
+        setOrders(data || []);
+      } else {
+        setOrders(prevOrders => [...prevOrders, ...(data || [])]);
+      }
+
+      setHasMore((data?.length || 0) === PAGE_SIZE && (count || 0) > (currentPage + 1) * PAGE_SIZE);
+
+      if (!reset) {
+        setPage(currentPage + 1);
+      }
     } catch (error) {
       console.error('Error fetching orders:', error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
-  const getFilteredOrders = () => {
-    let filtered = [...orders];
-
-    if (filterTable !== 'all') {
-      filtered = filtered.filter(order => order.table_number === filterTable);
+  const loadMore = useCallback(() => {
+    if (!loadingMore && hasMore) {
+      fetchOrders(false);
     }
+  }, [loadingMore, hasMore, page, filterTable, filterStatus, searchDate]);
 
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter(order => order.status === filterStatus);
-    }
+  const [allTables, setAllTables] = useState<string[]>([]);
 
-    if (searchDate) {
-      const searchDateTime = new Date(searchDate);
-      searchDateTime.setHours(0, 0, 0, 0);
-      const nextDay = new Date(searchDateTime);
-      nextDay.setDate(nextDay.getDate() + 1);
+  // Fetch all unique tables for filter dropdown
+  useEffect(() => {
+    const fetchTables = async () => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('table_number')
+        .order('table_number');
 
-      filtered = filtered.filter(order => {
-        const orderDate = new Date(order.created_at);
-        return orderDate >= searchDateTime && orderDate < nextDay;
-      });
-    }
-
-    return filtered;
-  };
-
-  const getTables = () => {
-    const tables = new Set(orders.map(order => order.table_number));
-    return Array.from(tables).sort((a, b) => {
-      // Sort with "counter" first, then natural sort for numbers
-      if (a === 'counter') return -1;
-      if (b === 'counter') return 1;
-      // Try to parse as numbers for numeric tables
-      const aNum = parseInt(a);
-      const bNum = parseInt(b);
-      if (!isNaN(aNum) && !isNaN(bNum)) {
-        return aNum - bNum;
+      if (!error && data) {
+        const tables = Array.from(new Set(data.map(o => o.table_number))).sort((a, b) => {
+          if (a === 'counter') return -1;
+          if (b === 'counter') return 1;
+          const aNum = parseInt(a);
+          const bNum = parseInt(b);
+          if (!isNaN(aNum) && !isNaN(bNum)) {
+            return aNum - bNum;
+          }
+          return a.localeCompare(b);
+        });
+        setAllTables(tables);
       }
-      // Fallback to string comparison
-      return a.localeCompare(b);
-    });
-  };
+    };
+    fetchTables();
+  }, []);
 
   const handleDeleteClick = (order: OrderWithItems) => {
     setOrderToDelete(order);
@@ -224,9 +341,6 @@ function OrdersContent() {
     );
   }
 
-  const filteredOrders = getFilteredOrders();
-  const tables = getTables();
-
   return (
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
@@ -256,7 +370,7 @@ function OrdersContent() {
                 onChange={(e) => setFilterTable(e.target.value)}
               >
                 <MenuItem value="all">All Tables</MenuItem>
-                {tables.map(table => (
+                {allTables.map(table => (
                   <MenuItem key={table} value={table.toString()}>
                     Table {table}
                   </MenuItem>
@@ -309,80 +423,100 @@ function OrdersContent() {
       <Card>
         <CardContent>
           <Typography variant="h6" fontWeight={700} gutterBottom>
-            Orders ({filteredOrders.length})
+            Orders ({orders.length}{!hasMore && loadingMore === false ? '' : '+'})
           </Typography>
 
-          {filteredOrders.length === 0 ? (
+          {orders.length === 0 ? (
             <Box sx={{ textAlign: 'center', py: 4 }}>
               <Typography color="text.secondary">No orders found</Typography>
             </Box>
           ) : (
-            <TableContainer component={Paper} variant="outlined">
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Order ID</TableCell>
-                    <TableCell>Table</TableCell>
-                    <TableCell>Items</TableCell>
-                    <TableCell>Total</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Date & Time</TableCell>
-                    <TableCell align="center">Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredOrders.map((order) => (
-                    <TableRow key={order.id} hover>
-                      <TableCell>
-                        <Typography variant="body2" fontFamily="monospace">
-                          #{order.id.slice(0, 8)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Chip label={`Table ${order.table_number}`} size="small" />
-                      </TableCell>
-                      <TableCell>
-                        <Box>
-                          {order.order_items.map((item, idx) => (
-                            <Typography key={idx} variant="body2">
-                              {item.quantity}x {item.name}
-                            </Typography>
-                          ))}
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Typography fontWeight={600}>₹{order.total.toFixed(2)}</Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={statusLabels[order.status]}
-                          color={statusColors[order.status]}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {new Date(order.created_at).toLocaleDateString()}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {new Date(order.created_at).toLocaleTimeString()}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="center">
-                        <IconButton
-                          color="error"
-                          onClick={() => handleDeleteClick(order)}
-                          size="small"
-                          title="Delete order"
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </TableCell>
+            <>
+              <TableContainer component={Paper} variant="outlined">
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Order ID</TableCell>
+                      <TableCell>Table</TableCell>
+                      <TableCell>Items</TableCell>
+                      <TableCell>Total</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Date & Time</TableCell>
+                      <TableCell align="center">Actions</TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                  </TableHead>
+                  <TableBody>
+                    {orders.map((order) => (
+                      <TableRow key={order.id} hover>
+                        <TableCell>
+                          <Typography variant="body2" fontFamily="monospace">
+                            #{order.id.slice(0, 8)}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Chip label={`Table ${order.table_number}`} size="small" />
+                        </TableCell>
+                        <TableCell>
+                          <Box>
+                            {order.order_items.map((item, idx) => (
+                              <Typography key={idx} variant="body2">
+                                {item.quantity}x {item.name}
+                              </Typography>
+                            ))}
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Typography fontWeight={600}>₹{order.total.toFixed(2)}</Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={statusLabels[order.status]}
+                            color={statusColors[order.status]}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2">
+                            {new Date(order.created_at).toLocaleDateString()}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {new Date(order.created_at).toLocaleTimeString()}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center">
+                          <IconButton
+                            color="error"
+                            onClick={() => handleDeleteClick(order)}
+                            size="small"
+                            title="Delete order"
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              {/* Infinite scroll trigger */}
+              <Box
+                ref={observerTarget}
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  py: 2,
+                  minHeight: 60
+                }}
+              >
+                {loadingMore && <CircularProgress size={30} />}
+                {!hasMore && !loadingMore && (
+                  <Typography variant="body2" color="text.secondary">
+                    No more orders to load
+                  </Typography>
+                )}
+              </Box>
+            </>
           )}
         </CardContent>
       </Card>
