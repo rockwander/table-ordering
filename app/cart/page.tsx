@@ -190,7 +190,7 @@ function CartContent() {
   const outstandingOrdersTotal = outstandingOrders.reduce((sum, order) => sum + order.total, 0);
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: 4 }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: cartItems.length > 0 ? '180px' : 4 }}>
       <Header
         tableNumber={tableNumber}
         showCart={false}
@@ -399,108 +399,6 @@ function CartContent() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom fontWeight={700}>
-                  Order Summary
-                </Typography>
-                <Box sx={{ my: 2 }}>
-                  {outstandingOrders.length > 0 && (
-                    <>
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          mb: 1,
-                        }}
-                      >
-                        <Typography variant="body1" color="text.secondary">
-                          Outstanding Orders ({outstandingOrders.length})
-                        </Typography>
-                        <Typography variant="body1" color="text.secondary">
-                          ₹{outstandingTotal.toFixed(2)}
-                        </Typography>
-                      </Box>
-                      <Divider sx={{ my: 1 }} />
-                    </>
-                  )}
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      mb: 1,
-                    }}
-                  >
-                    <Typography variant="body1">New Order Subtotal</Typography>
-                    <Typography variant="body1">₹{newCartSubtotal.toFixed(2)}</Typography>
-                  </Box>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      mb: 1,
-                    }}
-                  >
-                    <Typography variant="body1">New Order Total</Typography>
-                    <Typography variant="body1">₹{newCartTotal.toFixed(2)}</Typography>
-                  </Box>
-                  {outstandingOrders.length > 0 && (
-                    <>
-                      <Divider sx={{ my: 2 }} />
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          bgcolor: 'primary.light',
-                          p: 1.5,
-                          borderRadius: 1,
-                        }}
-                      >
-                        <Typography variant="h6" fontWeight={700}>
-                          Grand Total
-                        </Typography>
-                        <Typography variant="h6" fontWeight={700}>
-                          ₹{grandTotal.toFixed(2)}
-                        </Typography>
-                      </Box>
-                    </>
-                  )}
-                  {outstandingOrders.length === 0 && (
-                    <>
-                      <Divider sx={{ my: 2 }} />
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                        }}
-                      >
-                        <Typography variant="h6" fontWeight={700}>
-                          Total
-                        </Typography>
-                        <Typography variant="h6" fontWeight={700} color="primary">
-                          ₹{newCartTotal.toFixed(2)}
-                        </Typography>
-                      </Box>
-                    </>
-                  )}
-                </Box>
-
-                <Button
-                  variant="contained"
-                  fullWidth
-                  size="large"
-                  onClick={handlePlaceOrder}
-                  disabled={loading}
-                  sx={{ mt: 2 }}
-                >
-                  {loading ? (
-                    <CircularProgress size={24} color="inherit" />
-                  ) : (
-                    'Place Order'
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
           </>
         ) : null}
 
@@ -535,6 +433,85 @@ function CartContent() {
           </Card>
         )}
       </Container>
+
+      {/* Floating Bottom Order Summary - Only show when cart has items */}
+      {cartItems.length > 0 && (
+        <Box
+          sx={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            bgcolor: 'background.paper',
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            boxShadow: '0 -4px 12px rgba(0,0,0,0.1)',
+            zIndex: 1000,
+          }}
+        >
+          <Container maxWidth="md" sx={{ py: 2 }}>
+            <Box sx={{ mb: 2 }}>
+              {outstandingOrders.length > 0 ? (
+                <>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Outstanding ({outstandingOrders.length} orders)
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      ₹{outstandingTotal.toFixed(2)}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="body1" fontWeight={600}>
+                      New Order Total
+                    </Typography>
+                    <Typography variant="body1" fontWeight={600}>
+                      ₹{newCartTotal.toFixed(2)}
+                    </Typography>
+                  </Box>
+                  <Divider sx={{ my: 1 }} />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="h6" fontWeight={700}>
+                      Grand Total
+                    </Typography>
+                    <Typography variant="h6" fontWeight={700} color="primary">
+                      ₹{grandTotal.toFixed(2)}
+                    </Typography>
+                  </Box>
+                </>
+              ) : (
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="h6" fontWeight={700}>
+                    Total
+                  </Typography>
+                  <Typography variant="h6" fontWeight={700} color="primary">
+                    ₹{newCartTotal.toFixed(2)}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+
+            <Button
+              variant="contained"
+              fullWidth
+              size="large"
+              onClick={handlePlaceOrder}
+              disabled={loading}
+              sx={{
+                py: 1.5,
+                fontSize: '1.1rem',
+                fontWeight: 700,
+              }}
+            >
+              {loading ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                'Confirm Order'
+              )}
+            </Button>
+          </Container>
+        </Box>
+      )}
     </Box>
   );
 }
