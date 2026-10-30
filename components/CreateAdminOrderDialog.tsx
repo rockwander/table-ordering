@@ -119,41 +119,45 @@ export default function CreateAdminOrderDialog({
     }
   };
 
+  const getCartQuantity = (menuItemId: string) =>
+    cart.find(item => item.menuItem.id === menuItemId)?.quantity || 0;
+
   const addToCart = (menuItem: MenuItem) => {
     const existingIndex = cart.findIndex(item => item.menuItem.id === menuItem.id);
 
     if (existingIndex >= 0) {
-      // Increment quantity
-      const newCart = [...cart];
-      newCart[existingIndex].quantity += 1;
-      setCart(newCart);
+      updateQuantity(existingIndex, 1);
     } else {
-      // Add new item
       setCart([...cart, { menuItem, quantity: 1, special_instructions: '' }]);
     }
   };
 
-  const updateQuantity = (index: number, delta: number) => {
-    const newCart = [...cart];
-    newCart[index].quantity += delta;
-
-    if (newCart[index].quantity <= 0) {
-      newCart.splice(index, 1);
+  // Changes quantity from the menu grid stepper; removes the item at zero
+  const changeMenuItemQuantity = (menuItem: MenuItem, delta: number) => {
+    const index = cart.findIndex(item => item.menuItem.id === menuItem.id);
+    if (index >= 0) {
+      updateQuantity(index, delta);
+    } else if (delta > 0) {
+      addToCart(menuItem);
     }
+  };
 
-    setCart(newCart);
+  const updateQuantity = (index: number, delta: number) => {
+    const quantity = cart[index].quantity + delta;
+
+    if (quantity <= 0) {
+      setCart(cart.filter((_, i) => i !== index));
+    } else {
+      setCart(cart.map((item, i) => (i === index ? { ...item, quantity } : item)));
+    }
   };
 
   const removeFromCart = (index: number) => {
-    const newCart = [...cart];
-    newCart.splice(index, 1);
-    setCart(newCart);
+    setCart(cart.filter((_, i) => i !== index));
   };
 
   const updateInstructions = (index: number, instructions: string) => {
-    const newCart = [...cart];
-    newCart[index].special_instructions = instructions;
-    setCart(newCart);
+    setCart(cart.map((item, i) => (i === index ? { ...item, special_instructions: instructions } : item)));
   };
 
   const calculateTotal = () => {
@@ -270,11 +274,14 @@ export default function CreateAdminOrderDialog({
                       <Card
                         variant="outlined"
                         sx={{
-                          cursor: 'pointer',
+                          cursor: getCartQuantity(item.id) === 0 ? 'pointer' : 'default',
                           '&:hover': { boxShadow: 2 },
                           height: '100%',
+                          borderColor: getCartQuantity(item.id) > 0 ? 'primary.main' : undefined,
                         }}
-                        onClick={() => addToCart(item)}
+                        onClick={() => {
+                          if (getCartQuantity(item.id) === 0) addToCart(item);
+                        }}
                       >
                         <CardContent>
                           <Typography variant="body2" fontWeight={600} gutterBottom>
@@ -284,15 +291,52 @@ export default function CreateAdminOrderDialog({
                             ₹{item.price}
                           </Typography>
                           {item.is_mrp && <MrpNote />}
-                          <Button
-                            size="small"
-                            startIcon={<AddIcon />}
-                            fullWidth
-                            variant="outlined"
-                            sx={{ mt: 1 }}
-                          >
-                            Add
-                          </Button>
+                          {getCartQuantity(item.id) === 0 ? (
+                            <Button
+                              size="small"
+                              startIcon={<AddIcon />}
+                              fullWidth
+                              variant="outlined"
+                              sx={{ mt: 1 }}
+                            >
+                              Add
+                            </Button>
+                          ) : (
+                            <Box
+                              sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <IconButton
+                                size="small"
+                                onClick={() => changeMenuItemQuantity(item, -1)}
+                                sx={{
+                                  bgcolor: 'primary.main',
+                                  color: 'white',
+                                  '&:hover': { bgcolor: 'primary.dark' },
+                                  width: 30,
+                                  height: 30,
+                                }}
+                              >
+                                <RemoveIcon fontSize="small" />
+                              </IconButton>
+                              <Typography variant="body1" fontWeight={700} sx={{ minWidth: 32, textAlign: 'center' }}>
+                                {getCartQuantity(item.id)}
+                              </Typography>
+                              <IconButton
+                                size="small"
+                                onClick={() => changeMenuItemQuantity(item, 1)}
+                                sx={{
+                                  bgcolor: 'primary.main',
+                                  color: 'white',
+                                  '&:hover': { bgcolor: 'primary.dark' },
+                                  width: 30,
+                                  height: 30,
+                                }}
+                              >
+                                <AddIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          )}
                         </CardContent>
                       </Card>
                     </Grid>
