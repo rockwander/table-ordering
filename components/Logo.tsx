@@ -31,7 +31,7 @@ export default function Logo({
 
   return (
     <Box sx={{ display: 'inline-flex', flexDirection: 'column' }}>
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5 }}>
         <Typography
           component="span"
           sx={{
