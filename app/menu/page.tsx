@@ -510,7 +510,7 @@ function MenuContent() {
               sx={{
                 mb: 4,
                 p: 2,
-                background: 'linear-gradient(#F8F6F2, #F8F6F2) padding-box, linear-gradient(135deg, #C9A9A6, #A3404F, #800020, #5C0017) border-box',
+                background: 'linear-gradient(#FBF7F0, #FBF7F0) padding-box, linear-gradient(135deg, #FFD700, #FFA500, #FF6B6B, #FF1493) border-box',
                 border: '3px solid transparent',
                 borderRadius: 2,
               }}

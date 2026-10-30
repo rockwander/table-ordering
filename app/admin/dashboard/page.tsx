@@ -623,7 +623,7 @@ function DashboardContent() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
                   <YAxis yAxisId="left" orientation="left" stroke="#800020" />
-                  <YAxis yAxisId="right" orientation="right" stroke="#8A7D6E" />
+                  <YAxis yAxisId="right" orientation="right" stroke="#A68A64" />
                   <Tooltip
                     formatter={(value: number, name: string) => {
                       if (name === 'revenue') return `₹${value.toFixed(2)}`;
@@ -633,7 +633,7 @@ function DashboardContent() {
                   />
                   <Legend />
                   <Bar yAxisId="left" dataKey="revenue" fill="#800020" name="Revenue (₹)" />
-                  <Bar yAxisId="right" dataKey="orders" fill="#8A7D6E" name="Orders" />
+                  <Bar yAxisId="right" dataKey="orders" fill="#A68A64" name="Orders" />
                 </BarChart>
               </ResponsiveContainer>
               ) : (
@@ -667,7 +667,7 @@ function DashboardContent() {
                     interval="preserveStartEnd"
                   />
                   <YAxis yAxisId="left" orientation="left" stroke="#800020" />
-                  <YAxis yAxisId="right" orientation="right" stroke="#8A7D6E" />
+                  <YAxis yAxisId="right" orientation="right" stroke="#A68A64" />
                   <Tooltip
                     formatter={(value: number, name: string) => {
                       if (name === 'revenue') return `₹${value.toFixed(2)}`;
@@ -677,7 +677,7 @@ function DashboardContent() {
                   />
                   <Legend />
                   <Bar yAxisId="left" dataKey="revenue" fill="#800020" name="Revenue (₹)" />
-                  <Bar yAxisId="right" dataKey="orders" fill="#8A7D6E" name="Orders" />
+                  <Bar yAxisId="right" dataKey="orders" fill="#A68A64" name="Orders" />
                 </BarChart>
               </ResponsiveContainer>
               ) : (

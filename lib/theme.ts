@@ -17,8 +17,8 @@ export const theme = createTheme({
       contrastText: '#ffffff',
     },
     background: {
-      default: '#EAE4DC', // Greige
-      paper: '#F8F6F2', // Light greige
+      default: '#F3EBDD', // Beige
+      paper: '#FBF7F0', // Light beige
     },
     text: {
       primary: '#2C2C2C',
@@ -31,7 +31,7 @@ export const theme = createTheme({
       main: '#0288D1',
     },
     warning: {
-      main: '#B07A2A', // Muted ochre - harmonizes with burgundy/greige
+      main: '#B07A2A', // Muted ochre - harmonizes with burgundy/beige
     },
     error: {
       main: '#D32F2F',
@@ -123,7 +123,7 @@ export const theme = createTheme({
           boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
         },
         colorDefault: {
-          backgroundColor: '#F8F6F2',
+          backgroundColor: '#FBF7F0',
         },
       },
     },
