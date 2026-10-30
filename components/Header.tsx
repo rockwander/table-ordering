@@ -5,7 +5,6 @@ import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import Logo from './Logo';
 import OrderStatusToast from './OrderStatusToast';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
 
 interface HeaderProps {
   tableNumber?: string;
@@ -25,26 +24,14 @@ export default function Header({
   outstandingTotal = 0
 }: HeaderProps) {
   const router = useRouter();
-  const [scrolled, setScrolled] = useState(false);
-
-  // Taller header with tagline at the top; shrinks back once the diner scrolls.
-  // Separate thresholds stop it flickering as the header height changes.
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled((prev) => (prev ? window.scrollY > 8 : window.scrollY > 40));
-    };
-    handleScroll();
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   return (
     <>
     {tableNumber && !isAdmin && <OrderStatusToast tableNumber={tableNumber} />}
     <AppBar position="sticky" color="primary" elevation={1}>
       <Container maxWidth="lg">
-        <Toolbar sx={{ justifyContent: 'space-between', py: 1 }}>
-          <Logo size="small" showText={true} onDark collapsed={scrolled} />
+        <Toolbar sx={{ justifyContent: 'space-between', gap: 1, py: 1, px: { xs: 0, sm: 2 } }}>
+          <Logo size="small" showText={true} onDark showVegBadge />
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             {tableNumber && (
@@ -54,10 +41,11 @@ export default function Header({
                     variant="contained"
                     onClick={() => router.push(`/settle?table=${tableNumber}`)}
                     sx={{
-                      px: 3,
+                      px: { xs: 2, sm: 3 },
                       py: 1.25,
                       borderRadius: 1,
-                      minWidth: 120,
+                      minWidth: { xs: 0, sm: 120 },
+                      flexShrink: 0,
                       boxShadow: 2,
                       fontWeight: 700,
                       fontSize: '1rem',
@@ -85,14 +73,14 @@ export default function Header({
                       display: 'flex',
                       alignItems: 'center',
                       gap: 1,
-                      px: 2,
+                      px: 1.5,
                       py: 0.75,
                       borderRadius: 2,
                       bgcolor: 'background.paper',
                       color: 'primary.main',
                     }}
                   >
-                    <Typography variant="body2" fontWeight={600} color="inherit">
+                    <Typography variant="body2" fontWeight={600} color="inherit" sx={{ whiteSpace: 'nowrap' }}>
                       Table {tableNumber}
                     </Typography>
                   </Box>

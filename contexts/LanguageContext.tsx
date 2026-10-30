@@ -115,6 +115,8 @@ const translations = {
 
     // Brand
     'brand.tagline': 'Authentic South Indian Café',
+    'brand.pureVeg.line1': 'Pure',
+    'brand.pureVeg.line2': 'Vegetarian',
 
     // MRP items (no app discount)
     'mrp.note': 'MRP item · discount not applicable',
@@ -230,6 +232,8 @@ const translations = {
 
     // Brand
     'brand.tagline': 'અસલ દક્ષિણ ભારતીય કૅફે',
+    'brand.pureVeg.line1': 'શુદ્ધ',
+    'brand.pureVeg.line2': 'શાકાહારી',
 
     // MRP items (no app discount)
     'mrp.note': 'MRP વસ્તુ · ડિસ્કાઉન્ટ લાગુ નથી',

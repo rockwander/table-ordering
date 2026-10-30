@@ -2,13 +2,14 @@
 
 import { Box, Typography } from '@mui/material';
 import { useLanguage } from '@/contexts/LanguageContext';
+import PureVegBadge from './PureVegBadge';
 
 interface LogoProps {
   size?: 'small' | 'medium' | 'large';
   showText?: boolean;
   onDark?: boolean; // Light text with a soft shadow, for burgundy headers
   showTagline?: boolean;
-  collapsed?: boolean; // Smoothly hides the tagline (e.g. when the header shrinks on scroll)
+  showVegBadge?: boolean; // "Pure Vegetarian" mark at the title's top right (diner header)
 }
 
 const sizeMap = {
@@ -22,7 +23,7 @@ export default function Logo({
   showText = true,
   onDark = false,
   showTagline = true,
-  collapsed = false,
+  showVegBadge = false,
 }: LogoProps) {
   const { t } = useLanguage();
 
@@ -30,22 +31,25 @@ export default function Logo({
 
   return (
     <Box sx={{ display: 'inline-flex', flexDirection: 'column' }}>
-      <Typography
-        component="span"
-        sx={{
-          display: 'block',
-          fontSize: sizeMap[size].title,
-          fontWeight: 400,
-          fontFamily: 'var(--font-bree-serif), serif',
-          color: onDark ? 'background.paper' : '#000',
-          textShadow: onDark ? '0 2px 4px rgba(0, 0, 0, 0.35)' : 'none',
-          lineHeight: 1.2,
-          letterSpacing: '-0.01em',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        Ramani&apos;s Café
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+        <Typography
+          component="span"
+          sx={{
+            display: 'block',
+            fontSize: sizeMap[size].title,
+            fontWeight: 400,
+            fontFamily: 'var(--font-bree-serif), serif',
+            color: onDark ? 'background.paper' : '#000',
+            textShadow: onDark ? '0 2px 4px rgba(0, 0, 0, 0.35)' : 'none',
+            lineHeight: 1.2,
+            letterSpacing: '-0.01em',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          Ramani&apos;s Café
+        </Typography>
+        {showVegBadge && <PureVegBadge />}
+      </Box>
       {showTagline && (
         <Typography
           component="span"
@@ -58,10 +62,6 @@ export default function Logo({
             whiteSpace: 'nowrap',
             lineHeight: 1.4,
             color: onDark ? 'rgba(251, 247, 240, 0.85)' : 'text.secondary',
-            overflow: 'hidden',
-            maxHeight: collapsed ? 0 : '1.4em',
-            opacity: collapsed ? 0 : 1,
-            transition: 'max-height 0.25s ease, opacity 0.2s ease',
           }}
         >
           {t('brand.tagline')}

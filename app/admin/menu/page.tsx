@@ -178,13 +178,6 @@ function SortableRow({ item, onEdit, onDelete, onToggleTopSelling, onImageClick,
       </TableCell>
       <TableCell align="center">
         <Chip
-          label={item.is_vegetarian ? 'Veg' : 'Non-Veg'}
-          size="small"
-          color={item.is_vegetarian ? 'success' : 'error'}
-        />
-      </TableCell>
-      <TableCell align="center">
-        <Chip
           label={item.is_available ? 'Available' : 'Unavailable'}
           size="small"
           color={item.is_available ? 'success' : 'default'}
@@ -251,7 +244,6 @@ function MenuContent() {
     price: 0,
     category_id: '',
     is_available: true,
-    is_vegetarian: true,
     is_top_selling: false,
     is_mrp: false,
     image_url: '',
@@ -364,7 +356,6 @@ function MenuContent() {
         price: item.price,
         category_id: item.category_id || '',
         is_available: item.is_available,
-        is_vegetarian: item.is_vegetarian,
         is_top_selling: item.is_top_selling,
         is_mrp: item.is_mrp ?? false,
         image_url: item.image_url || '',
@@ -378,8 +369,7 @@ function MenuContent() {
         price: 0,
         category_id: categories[0]?.id || '',
         is_available: true,
-        is_vegetarian: true,
-        is_top_selling: false,
+            is_top_selling: false,
         is_mrp: false,
         image_url: '',
         display_order: menuItems.length,
@@ -768,7 +758,6 @@ function MenuContent() {
                           <TableCell sx={{ width: 50 }}></TableCell>
                           <TableCell>Name</TableCell>
                           <TableCell>Price</TableCell>
-                          <TableCell align="center">Type</TableCell>
                           <TableCell align="center">Status</TableCell>
                           <TableCell align="center">Top Selling</TableCell>
                           <TableCell align="right">Actions</TableCell>
@@ -916,15 +905,6 @@ function MenuContent() {
               value={itemForm.display_order}
               onChange={(e) => setItemForm({ ...itemForm, display_order: parseInt(e.target.value) })}
               fullWidth
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={itemForm.is_vegetarian}
-                  onChange={(e) => setItemForm({ ...itemForm, is_vegetarian: e.target.checked })}
-                />
-              }
-              label="Vegetarian"
             />
             <FormControlLabel
               control={

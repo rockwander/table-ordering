@@ -572,15 +572,6 @@ function MenuContent() {
                     >
                       {item.name}
                     </Typography>
-                    {item.is_vegetarian && (
-                      <Chip
-                        icon={<CheckCircleIcon />}
-                        label="Veg"
-                        size="small"
-                        color="success"
-                        sx={{ height: 24, flexShrink: 0 }}
-                      />
-                    )}
                   </Box>
                   <Typography
                     variant="body2"
@@ -739,15 +730,6 @@ function MenuContent() {
                             >
                               {item.name}
                             </Typography>
-                            {item.is_vegetarian && (
-                              <Chip
-                                icon={<CheckCircleIcon />}
-                                label="Veg"
-                                size="small"
-                                color="success"
-                                sx={{ height: 24, flexShrink: 0 }}
-                              />
-                            )}
                           </Box>
                           <Typography
                             variant="body2"
@@ -887,15 +869,6 @@ function MenuContent() {
                     >
                       {item.name}
                     </Typography>
-                    {item.is_vegetarian && (
-                      <Chip
-                        icon={<CheckCircleIcon />}
-                        label="Veg"
-                        size="small"
-                        color="success"
-                        sx={{ height: 24, flexShrink: 0 }}
-                      />
-                    )}
                   </Box>
                   <Typography
                     variant="body2"
