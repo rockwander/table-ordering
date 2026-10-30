@@ -25,10 +25,10 @@ export default function Header({
   const router = useRouter();
 
   return (
-    <AppBar position="sticky" color="default" elevation={1}>
+    <AppBar position="sticky" color="primary" elevation={1}>
       <Container maxWidth="lg">
         <Toolbar sx={{ justifyContent: 'space-between', py: 1 }}>
-          <Logo size="small" showText={true} />
+          <Logo size="small" showText={true} onDark />
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             {tableNumber && (
@@ -36,7 +36,6 @@ export default function Header({
                 {outstandingOrdersCount > 0 ? (
                   <Button
                     variant="contained"
-                    color="success"
                     onClick={() => router.push(`/settle?table=${tableNumber}`)}
                     sx={{
                       px: 3,
@@ -46,11 +45,14 @@ export default function Header({
                       boxShadow: 2,
                       fontWeight: 700,
                       fontSize: '1rem',
+                      bgcolor: 'background.paper',
+                      color: 'primary.main',
                       textTransform: 'none',
                       userSelect: 'none',
                       WebkitTapHighlightColor: 'transparent',
                       transition: 'all 0.2s',
                       '&:hover': {
+                        bgcolor: 'background.default',
                         boxShadow: 3,
                         transform: 'translateY(-1px)',
                       },
@@ -70,8 +72,8 @@ export default function Header({
                       px: 2,
                       py: 0.75,
                       borderRadius: 2,
-                      bgcolor: 'primary.main',
-                      color: 'white',
+                      bgcolor: 'background.paper',
+                      color: 'primary.main',
                     }}
                   >
                     <Typography variant="body2" fontWeight={600} color="inherit">
@@ -83,7 +85,7 @@ export default function Header({
             )}
 
             {isAdmin && (
-              <Typography variant="body2" color="text.secondary" fontWeight={600}>
+              <Typography variant="body2" fontWeight={600} sx={{ color: 'background.paper' }}>
                 Admin Dashboard
               </Typography>
             )}
@@ -93,10 +95,10 @@ export default function Header({
                 color="primary"
                 onClick={() => router.push(`/menu?table=${tableNumber}`)}
                 sx={{
-                  bgcolor: 'primary.light',
-                  color: 'white',
+                  bgcolor: 'background.paper',
+                  color: 'primary.main',
                   '&:hover': {
-                    bgcolor: 'primary.main',
+                    bgcolor: 'background.default',
                   },
                 }}
               >

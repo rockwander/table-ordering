@@ -50,6 +50,20 @@ const executiveMenuItems = [
   { label: 'Live Orders', icon: <PlaylistPlayIcon />, path: '/admin/live-orders' },
 ];
 
+// Language toggle styles for the burgundy top bar
+const headerToggleSx = (selected: boolean) =>
+  selected
+    ? {
+        bgcolor: 'background.paper',
+        color: 'primary.main',
+        '&:hover': { bgcolor: 'background.default' },
+      }
+    : {
+        color: 'background.paper',
+        borderColor: 'rgba(251, 247, 240, 0.6)',
+        '&:hover': { borderColor: 'background.paper', bgcolor: 'rgba(251, 247, 240, 0.15)' },
+      };
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -157,8 +171,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         sx={{
           width: { md: `calc(100% - ${drawerWidth}px)` },
           ml: { md: `${drawerWidth}px` },
-          bgcolor: 'background.paper',
-          color: 'text.primary',
+          bgcolor: 'primary.main',
+          color: 'background.paper',
         }}
       >
         <Toolbar>
@@ -170,7 +184,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           >
             <MenuIcon />
           </IconButton>
-          <Logo size="small" showText={true} />
+          <Logo size="small" showText={true} onDark />
           <Box sx={{ flexGrow: 1 }} />
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
             <Button
@@ -181,6 +195,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 minWidth: { xs: 'auto', sm: 80 },
                 px: { xs: 1, sm: 2 },
                 fontWeight: 600,
+                ...headerToggleSx(language === 'en'),
               }}
             >
               English
@@ -194,6 +209,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 minWidth: { xs: 'auto', sm: 100 },
                 px: { xs: 1, sm: 2 },
                 fontWeight: 600,
+                ...headerToggleSx(language === 'gu'),
               }}
             >
               ગુજરાતી
@@ -203,12 +219,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               size="small"
               sx={{
                 ml: 1,
-                color: 'error.main',
+                color: 'background.paper',
                 border: '1px solid',
-                borderColor: 'error.light',
+                borderColor: 'rgba(251, 247, 240, 0.6)',
                 '&:hover': {
-                  bgcolor: 'error.50',
-                  borderColor: 'error.main',
+                  bgcolor: 'rgba(251, 247, 240, 0.15)',
+                  borderColor: 'background.paper',
                 },
               }}
               title="Sign Out"
