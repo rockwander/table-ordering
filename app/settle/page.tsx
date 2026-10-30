@@ -21,6 +21,9 @@ import StarIcon from '@mui/icons-material/Star';
 import RateReviewIcon from '@mui/icons-material/RateReview';
 import Header from '@/components/Header';
 import { supabase } from '@/lib/supabase';
+import MrpNote from '@/components/MrpNote';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { getAppDiscount, getMrpAmount, isMrpItem } from '@/lib/discount';
 import { RestaurantSettings } from '@/types';
 
 interface Order {
@@ -38,10 +41,12 @@ interface Order {
     price: number;
     quantity: number;
     special_instructions: string | null;
+    menu_items?: { is_mrp: boolean } | null;
   }>;
 }
 
 function SettleContent() {
+  const { t } = useLanguage();
   const searchParams = useSearchParams();
   const router = useRouter();
   const tableNumber = searchParams.get('table');
@@ -77,7 +82,7 @@ function SettleContent() {
         .from('orders')
         .select(`
           *,
-          order_items (*)
+          order_items (*, menu_items (is_mrp))
         `)
         .eq('table_number', tableNumber!)
         .neq('status', 'paid')
@@ -94,8 +99,9 @@ function SettleContent() {
   };
 
   const grandTotal = orders.reduce((sum, order) => sum + order.total, 0);
-  const discountPercent = 10;
-  const discountAmount = grandTotal * (discountPercent / 100);
+  const allItems = orders.flatMap((order) => order.order_items);
+  const discountAmount = getAppDiscount(allItems);
+  const mrpAmount = getMrpAmount(allItems);
   const finalTotal = grandTotal - discountAmount;
 
   if (!tableNumber) {
@@ -188,6 +194,7 @@ function SettleContent() {
                                 Note: {item.special_instructions}
                               </Typography>
                             )}
+                            {isMrpItem(item) && <MrpNote />}
                           </Box>
                           <Typography variant="body1" fontWeight={600}>
                             ₹{(item.price * item.quantity).toFixed(2)}
@@ -220,6 +227,16 @@ function SettleContent() {
                     <Typography variant="body1">Subtotal ({orders.length} order{orders.length !== 1 ? 's' : ''})</Typography>
                     <Typography variant="body1">₹{grandTotal.toFixed(2)}</Typography>
                   </Box>
+                  {mrpAmount > 0 && (
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {t('mrp.itemsExcluded')}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        ₹{mrpAmount.toFixed(2)}
+                      </Typography>
+                    </Box>
+                  )}
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                     <Typography variant="body1" color="success.main" fontWeight={600}>
                       App Discount (10%)
@@ -238,9 +255,11 @@ function SettleContent() {
                     </Typography>
                   </Box>
                 </Box>
-                <Alert severity="success" sx={{ mt: 2 }}>
-                  You saved ₹{discountAmount.toFixed(2)} by ordering through our app!
-                </Alert>
+                {discountAmount > 0 && (
+                  <Alert severity="success" sx={{ mt: 2 }}>
+                    You saved ₹{discountAmount.toFixed(2)} by ordering through our app!
+                  </Alert>
+                )}
               </CardContent>
             </Card>
 

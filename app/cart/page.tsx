@@ -25,6 +25,8 @@ import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Header from '@/components/Header';
 import { supabase } from '@/lib/supabase';
+import MrpNote from '@/components/MrpNote';
+import { isMrpItem } from '@/lib/discount';
 import { useCart } from '@/contexts/CartContext';
 import { RestaurantSettings } from '@/types';
 
@@ -43,6 +45,7 @@ interface Order {
     price: number;
     quantity: number;
     special_instructions: string | null;
+    menu_items?: { is_mrp: boolean } | null;
   }>;
 }
 
@@ -90,7 +93,7 @@ function CartContent() {
         .from('orders')
         .select(`
           *,
-          order_items (*)
+          order_items (*, menu_items (is_mrp))
         `)
         .eq('table_number', tableNumber!)
         .neq('status', 'paid')
@@ -257,6 +260,7 @@ function CartContent() {
                                 Note: {item.special_instructions}
                               </Typography>
                             )}
+                            {isMrpItem(item) && <MrpNote />}
                           </Box>
                           <Typography variant="body1" fontWeight={600}>
                             ₹{(item.price * item.quantity).toFixed(2)}
@@ -327,6 +331,7 @@ function CartContent() {
                           <Typography variant="body1" color="primary" fontWeight={600}>
                             ₹{item.menuItem.price.toFixed(2)} each
                           </Typography>
+                          {item.menuItem.is_mrp && <MrpNote />}
                         </Box>
                         <IconButton
                           color="error"

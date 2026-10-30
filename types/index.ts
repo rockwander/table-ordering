@@ -30,6 +30,7 @@ export type MenuItem = {
   is_available: boolean;
   is_vegetarian: boolean;
   is_top_selling: boolean;
+  is_mrp: boolean; // Sold at printed MRP - app discount never applies
   display_order: number;
   created_at: string;
   updated_at: string;
@@ -72,6 +73,7 @@ export type OrderItem = {
   quantity: number;
   special_instructions: string | null;
   created_at: string;
+  menu_items?: { is_mrp: boolean } | null; // Joined via menu_item_id
 };
 
 export type RestaurantSettings = {

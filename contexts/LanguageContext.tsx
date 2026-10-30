@@ -112,6 +112,13 @@ const translations = {
 
     // Common
     'common.cancel': 'Cancel',
+
+    // MRP items (no app discount)
+    'mrp.note': 'MRP item · discount not applicable',
+    'mrp.chip': 'MRP',
+    'mrp.formLabel': 'MRP item (no discount)',
+    'mrp.itemsExcluded': 'MRP items (no discount)',
+    'mrp.excludedFromDiscount': 'Discount does not apply to MRP items',
   },
   gu: {
     // Dashboard
@@ -214,6 +221,13 @@ const translations = {
 
     // Common
     'common.cancel': 'રદ કરો',
+
+    // MRP items (no app discount)
+    'mrp.note': 'MRP વસ્તુ · ડિસ્કાઉન્ટ લાગુ નથી',
+    'mrp.chip': 'MRP',
+    'mrp.formLabel': 'MRP વસ્તુ (ડિસ્કાઉન્ટ નહીં)',
+    'mrp.itemsExcluded': 'MRP વસ્તુઓ (ડિસ્કાઉન્ટ નહીં)',
+    'mrp.excludedFromDiscount': 'MRP વસ્તુઓ પર ડિસ્કાઉન્ટ લાગુ નથી',
   },
 };
 

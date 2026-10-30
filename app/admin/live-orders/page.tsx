@@ -35,6 +35,8 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminLayout from '@/components/AdminLayout';
 import BuzzerNotification from '@/components/BuzzerNotification';
+import MrpNote from '@/components/MrpNote';
+import { getAppDiscount, getMrpAmount, isMrpItem } from '@/lib/discount';
 import CreateAdminOrderDialog from '@/components/CreateAdminOrderDialog';
 import EditOrderDialog from '@/components/EditOrderDialog';
 import { supabase } from '@/lib/supabase';
@@ -80,6 +82,7 @@ interface OrderWithItems extends Order {
     price: number;
     quantity: number;
     special_instructions: string | null;
+    menu_items?: { is_mrp: boolean } | null;
   }>;
   orderNumber?: number;
 }
@@ -310,7 +313,7 @@ function LiveOrdersContent() {
         .from('orders')
         .select(`
           *,
-          order_items (*)
+          order_items (*, menu_items (is_mrp))
         `)
         .gte('created_at', sevenDaysAgo.toISOString())
         .order('created_at', { ascending: false });
@@ -506,6 +509,11 @@ function LiveOrdersContent() {
     return billDiscounts[billId] !== undefined ? billDiscounts[billId] : true;
   };
 
+  // Discount only covers non-MRP items
+  const getBillItems = (bill: Bill) => bill.orders.flatMap(order => order.order_items);
+  const getBillDiscountAmount = (bill: Bill) =>
+    getBillDiscount(bill.bill_id) ? getAppDiscount(getBillItems(bill)) : 0;
+
   const toggleBillDiscount = (billId: string) => {
     setBillDiscounts(prev => ({
       ...prev,
@@ -526,8 +534,7 @@ function LiveOrdersContent() {
 
       // Calculate bill totals with discount consideration
       const billSubtotal = bill.orders.reduce((sum, order) => sum + order.subtotal, 0);
-      const applyDiscount = getBillDiscount(bill.bill_id);
-      const billTotal = applyDiscount ? billSubtotal * 0.9 : billSubtotal;
+      const billTotal = billSubtotal - getBillDiscountAmount(bill);
 
       // Generate bill number (format: BILL-YYYYMMDD-HHMMSS)
       const now = new Date();
@@ -636,7 +643,8 @@ function LiveOrdersContent() {
   const handlePrintBill = (bill: Bill) => {
     try {
       const doc = new jsPDF();
-      const applyDiscount = getBillDiscount(bill.bill_id);
+      const discountAmount = getBillDiscountAmount(bill);
+      const mrpAmount = getMrpAmount(getBillItems(bill));
 
       // Header
       doc.setFontSize(20);
@@ -694,6 +702,16 @@ function LiveOrdersContent() {
           doc.text(`₹${(item.quantity * item.price).toFixed(2)}`, 190, yPos, { align: 'right' });
           yPos += 5;
 
+          // English only: jsPDF's built-in fonts can't render Gujarati
+          if (isMrpItem(item)) {
+            doc.setFontSize(8);
+            doc.setTextColor(100);
+            doc.text('MRP item - discount not applicable', 25, yPos);
+            doc.setTextColor(0);
+            doc.setFontSize(10);
+            yPos += 5;
+          }
+
           if (item.special_instructions) {
             doc.setFontSize(8);
             doc.setTextColor(100);
@@ -723,11 +741,21 @@ function LiveOrdersContent() {
       doc.text(`₹${bill.total.toFixed(2)}`, 190, yPos, { align: 'right' });
       yPos += 7;
 
-      if (applyDiscount) {
+      if (mrpAmount > 0) {
+        doc.setFontSize(9);
+        doc.setTextColor(100);
+        doc.text('MRP items (no discount):', 120, yPos);
+        doc.text(`₹${mrpAmount.toFixed(2)}`, 190, yPos, { align: 'right' });
+        doc.setTextColor(0);
+        doc.setFontSize(11);
+        yPos += 7;
+      }
+
+      if (discountAmount > 0) {
         doc.setTextColor(34, 197, 94); // Green color
         doc.setFont('helvetica', 'bold');
         doc.text('App Discount (10%):', 120, yPos);
-        doc.text(`- ₹${(bill.total * 0.1).toFixed(2)}`, 190, yPos, { align: 'right' });
+        doc.text(`- ₹${discountAmount.toFixed(2)}`, 190, yPos, { align: 'right' });
         doc.setTextColor(0);
         yPos += 10;
       } else {
@@ -740,7 +768,7 @@ function LiveOrdersContent() {
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
       doc.text('Final Amount:', 120, yPos);
-      doc.text(`₹${(applyDiscount ? bill.total * 0.9 : bill.total).toFixed(2)}`, 190, yPos, { align: 'right' });
+      doc.text(`₹${(bill.total - discountAmount).toFixed(2)}`, 190, yPos, { align: 'right' });
 
       // Footer
       yPos += 20;
@@ -949,13 +977,13 @@ function LiveOrdersContent() {
                   <Box sx={{ textAlign: 'right' }}>
                     {selectedTab === 1 && (
                       <>
-                        {getBillDiscount(bill.bill_id) ? (
+                        {getBillDiscountAmount(bill) > 0 ? (
                           <>
                             <Typography variant="body2" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
                               ₹{bill.total.toFixed(2)}
                             </Typography>
                             <Typography variant="h6" fontWeight={700} color="success.main">
-                              ₹{(bill.total * 0.9).toFixed(2)}
+                              ₹{(bill.total - getBillDiscountAmount(bill)).toFixed(2)}
                             </Typography>
                           </>
                         ) : (
@@ -1047,6 +1075,7 @@ function LiveOrdersContent() {
                                         {t('liveOrders.note')}: {item.special_instructions}
                                       </Typography>
                                     )}
+                                    {isMrpItem(item) && <MrpNote />}
                                   </TableCell>
                                   <TableCell align="center">{item.quantity}</TableCell>
                                   <TableCell align="right">₹{item.price.toFixed(2)}</TableCell>
@@ -1108,13 +1137,24 @@ function LiveOrdersContent() {
                           sx={{ mb: 1 }}
                         />
 
+                        {getMrpAmount(getBillItems(bill)) > 0 && (
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                            <Typography variant="body2" color="text.secondary">
+                              {t('mrp.itemsExcluded')}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              ₹{getMrpAmount(getBillItems(bill)).toFixed(2)}
+                            </Typography>
+                          </Box>
+                        )}
+
                         {getBillDiscount(bill.bill_id) && (
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                             <Typography variant="body2" color="success.main" fontWeight={600}>
                               {t('liveOrders.appDiscount')}
                             </Typography>
                             <Typography variant="body2" color="success.main" fontWeight={600}>
-                              - ₹{(bill.total * 0.1).toFixed(2)}
+                              - ₹{getBillDiscountAmount(bill).toFixed(2)}
                             </Typography>
                           </Box>
                         )}
@@ -1125,7 +1165,7 @@ function LiveOrdersContent() {
                             {t('liveOrders.finalAmount')}
                           </Typography>
                           <Typography variant="h6" fontWeight={700} color="primary">
-                            ₹{(getBillDiscount(bill.bill_id) ? bill.total * 0.9 : bill.total).toFixed(2)}
+                            ₹{(bill.total - getBillDiscountAmount(bill)).toFixed(2)}
                           </Typography>
                         </Box>
                       </CardContent>

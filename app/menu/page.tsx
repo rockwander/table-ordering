@@ -26,6 +26,7 @@ import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import Header from '@/components/Header';
+import MrpNote from '@/components/MrpNote';
 import HighlightCircles from '@/components/HighlightCircles';
 import StoryViewer from '@/components/StoryViewer';
 import { supabase } from '@/lib/supabase';
@@ -598,9 +599,12 @@ function MenuContent() {
                     {item.description || '\u00A0'}
                   </Typography>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 'auto', gap: 1 }}>
-                    <Typography variant="h6" color="primary" fontWeight={700} sx={{ whiteSpace: 'nowrap' }}>
-                      ₹{item.price.toFixed(2)}
-                    </Typography>
+                    <Box>
+                      <Typography variant="h6" color="primary" fontWeight={700} sx={{ whiteSpace: 'nowrap' }}>
+                        ₹{item.price.toFixed(2)}
+                      </Typography>
+                      {item.is_mrp && <MrpNote />}
+                    </Box>
                     {getItemQuantityInCart(item.id) === 0 ? (
                       <Button
                         variant="contained"
@@ -762,9 +766,12 @@ function MenuContent() {
                             {item.description || '\u00A0'}
                           </Typography>
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 'auto', gap: 1 }}>
-                            <Typography variant="h6" color="primary" fontWeight={700} sx={{ whiteSpace: 'nowrap' }}>
-                              ₹{item.price.toFixed(2)}
-                            </Typography>
+                            <Box>
+                              <Typography variant="h6" color="primary" fontWeight={700} sx={{ whiteSpace: 'nowrap' }}>
+                                ₹{item.price.toFixed(2)}
+                              </Typography>
+                              {item.is_mrp && <MrpNote />}
+                            </Box>
                             {getItemQuantityInCart(item.id) === 0 ? (
                               <Button
                                 variant="contained"
@@ -907,9 +914,12 @@ function MenuContent() {
                     {item.description || '\u00A0'}
                   </Typography>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 'auto', gap: 1 }}>
-                    <Typography variant="h6" color="primary" fontWeight={700} sx={{ whiteSpace: 'nowrap' }}>
-                      ₹{item.price.toFixed(2)}
-                    </Typography>
+                    <Box>
+                      <Typography variant="h6" color="primary" fontWeight={700} sx={{ whiteSpace: 'nowrap' }}>
+                        ₹{item.price.toFixed(2)}
+                      </Typography>
+                      {item.is_mrp && <MrpNote />}
+                    </Box>
                     {getItemQuantityInCart(item.id) === 0 ? (
                       <Button
                         variant="contained"

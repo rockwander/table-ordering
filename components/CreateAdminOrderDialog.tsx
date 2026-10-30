@@ -25,6 +25,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
 import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/contexts/LanguageContext';
+import MrpNote from '@/components/MrpNote';
 
 interface MenuItem {
   id: string;
@@ -33,6 +34,7 @@ interface MenuItem {
   price: number;
   category_id: string;
   is_available: boolean;
+  is_mrp?: boolean;
 }
 
 interface Category {
@@ -281,6 +283,7 @@ export default function CreateAdminOrderDialog({
                           <Typography variant="h6" color="primary" fontWeight={700}>
                             ₹{item.price}
                           </Typography>
+                          {item.is_mrp && <MrpNote />}
                           <Button
                             size="small"
                             startIcon={<AddIcon />}
@@ -321,6 +324,7 @@ export default function CreateAdminOrderDialog({
                             <Typography variant="caption" color="text.secondary">
                               ₹{item.menuItem.price} × {item.quantity} = ₹{(item.menuItem.price * item.quantity).toFixed(2)}
                             </Typography>
+                            {item.menuItem.is_mrp && <MrpNote />}
                           </Box>
                           <Box display="flex" alignItems="center" gap={0.5}>
                             <IconButton

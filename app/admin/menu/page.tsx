@@ -45,6 +45,7 @@ import AdminLayout from '@/components/AdminLayout';
 import AdminRouteGuard from '@/components/AdminRouteGuard';
 import { supabase } from '@/lib/supabase';
 import { Category, MenuItem as MenuItemType } from '@/types';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   DndContext,
   closestCenter,
@@ -128,6 +129,7 @@ interface SortableRowProps {
 }
 
 function SortableRow({ item, onEdit, onDelete, onToggleTopSelling, onImageClick, selected, onToggleSelect }: SortableRowProps) {
+  const { t } = useLanguage();
   const {
     attributes,
     listeners,
@@ -166,7 +168,14 @@ function SortableRow({ item, onEdit, onDelete, onToggleTopSelling, onImageClick,
           <Typography>{item.name}</Typography>
         </Box>
       </TableCell>
-      <TableCell>₹{item.price.toFixed(2)}</TableCell>
+      <TableCell>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          ₹{item.price.toFixed(2)}
+          {item.is_mrp && (
+            <Chip label={t('mrp.chip')} size="small" variant="outlined" color="primary" />
+          )}
+        </Box>
+      </TableCell>
       <TableCell align="center">
         <Chip
           label={item.is_vegetarian ? 'Veg' : 'Non-Veg'}
@@ -207,6 +216,7 @@ function SortableRow({ item, onEdit, onDelete, onToggleTopSelling, onImageClick,
 }
 
 function MenuContent() {
+  const { t } = useLanguage();
   const [categories, setCategories] = useState<Category[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItemType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -243,6 +253,7 @@ function MenuContent() {
     is_available: true,
     is_vegetarian: true,
     is_top_selling: false,
+    is_mrp: false,
     image_url: '',
     display_order: 0,
   });
@@ -355,6 +366,7 @@ function MenuContent() {
         is_available: item.is_available,
         is_vegetarian: item.is_vegetarian,
         is_top_selling: item.is_top_selling,
+        is_mrp: item.is_mrp ?? false,
         image_url: item.image_url || '',
         display_order: item.display_order,
       });
@@ -368,6 +380,7 @@ function MenuContent() {
         is_available: true,
         is_vegetarian: true,
         is_top_selling: false,
+        is_mrp: false,
         image_url: '',
         display_order: menuItems.length,
       });
@@ -930,6 +943,15 @@ function MenuContent() {
                 />
               }
               label="Top Selling"
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={itemForm.is_mrp}
+                  onChange={(e) => setItemForm({ ...itemForm, is_mrp: e.target.checked })}
+                />
+              }
+              label={t('mrp.formLabel')}
             />
           </Box>
         </DialogContent>

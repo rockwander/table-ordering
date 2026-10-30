@@ -25,6 +25,9 @@ import ReceiptIcon from '@mui/icons-material/Receipt';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Header from '@/components/Header';
 import { supabase } from '@/lib/supabase';
+import MrpNote from '@/components/MrpNote';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { isMrpItem } from '@/lib/discount';
 import { Order, OrderItem, OrderStatus } from '@/types';
 
 const statusSteps: OrderStatus[] = ['pending', 'confirmed', 'preparing', 'ready', 'served'];
@@ -52,6 +55,7 @@ const statusColors: Record<OrderStatus, 'default' | 'primary' | 'secondary' | 'e
 };
 
 function OrderPageContent() {
+  const { t } = useLanguage();
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -107,7 +111,7 @@ function OrderPageContent() {
       // Fetch order items
       const { data: itemsData, error: itemsError } = await supabase
         .from('order_items')
-        .select('*')
+        .select('*, menu_items (is_mrp)')
         .eq('order_id', orderId);
 
       if (itemsError) throw itemsError;
@@ -246,6 +250,7 @@ function OrderPageContent() {
                           Note: {item.special_instructions}
                         </Typography>
                       )}
+                      {isMrpItem(item) && <MrpNote />}
                     </Box>
                     <Typography variant="body1" fontWeight={600}>
                       ₹{(item.price * item.quantity).toFixed(2)}
@@ -265,6 +270,11 @@ function OrderPageContent() {
             </Typography>
             <Alert severity="success" sx={{ mb: 2 }}>
               10% discount will be applied when settling the bill
+              {orderItems.some(isMrpItem) && (
+                <Typography variant="caption" component="div" sx={{ mt: 0.5 }}>
+                  {t('mrp.excludedFromDiscount')}
+                </Typography>
+              )}
             </Alert>
             <Box sx={{ my: 2 }}>
               <Box

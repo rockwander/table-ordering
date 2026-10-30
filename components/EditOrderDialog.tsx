@@ -26,12 +26,15 @@ import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
 import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/contexts/LanguageContext';
+import MrpNote from '@/components/MrpNote';
+import { isMrpItem } from '@/lib/discount';
 
 interface MenuItem {
   id: string;
   name: string;
   gujarati_name?: string | null;
   price: number;
+  is_mrp?: boolean;
 }
 
 interface OrderItem {
@@ -42,6 +45,7 @@ interface OrderItem {
   price: number;
   quantity: number;
   special_instructions: string | null;
+  menu_items?: { is_mrp: boolean } | null;
 }
 
 interface OrderData {
@@ -99,7 +103,7 @@ export default function EditOrderDialog({
         .from('orders')
         .select(`
           *,
-          order_items (*)
+          order_items (*, menu_items (is_mrp))
         `)
         .eq('id', orderId)
         .single();
@@ -119,7 +123,7 @@ export default function EditOrderDialog({
     try {
       const { data, error } = await supabase
         .from('menu_items')
-        .select('id, name, gujarati_name, price')
+        .select('id, name, gujarati_name, price, is_mrp')
         .eq('is_available', true)
         .order('name');
 
@@ -171,6 +175,7 @@ export default function EditOrderDialog({
           price: menuItem.price,
           quantity: 1,
           special_instructions: null,
+          menu_items: { is_mrp: Boolean(menuItem.is_mrp) },
         },
       ]);
     }
@@ -299,6 +304,7 @@ export default function EditOrderDialog({
                           <Typography variant="caption" color="text.secondary">
                             ₹{item.price} × {item.quantity} = ₹{(item.price * item.quantity).toFixed(2)}
                           </Typography>
+                          {isMrpItem(item) && <MrpNote />}
                         </Box>
                         <Box display="flex" alignItems="center" gap={0.5}>
                           <IconButton size="small" onClick={() => updateQuantity(index, -1)}>
