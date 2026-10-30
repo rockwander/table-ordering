@@ -348,7 +348,7 @@ function MenuContent() {
                   left: 16,
                   right: 180,
                   zIndex: 900,
-                  backgroundColor: 'white',
+                  backgroundColor: 'background.paper',
                   boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
                   borderRadius: 1,
                   maxHeight: '60vh',
@@ -510,7 +510,7 @@ function MenuContent() {
               sx={{
                 mb: 4,
                 p: 2,
-                background: 'linear-gradient(white, white) padding-box, linear-gradient(135deg, #FFD700, #FFA500, #FF6B6B, #FF1493) border-box',
+                background: 'linear-gradient(#F8F6F2, #F8F6F2) padding-box, linear-gradient(135deg, #C9A9A6, #A3404F, #800020, #5C0017) border-box',
                 border: '3px solid transparent',
                 borderRadius: 2,
               }}

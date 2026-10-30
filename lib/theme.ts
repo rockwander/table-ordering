@@ -5,9 +5,9 @@ import { createTheme } from '@mui/material/styles';
 export const theme = createTheme({
   palette: {
     primary: {
-      main: '#D4691A', // Warm terracotta/burnt orange - South Indian spice color
-      light: '#E88D4F',
-      dark: '#A04D12',
+      main: '#800020', // Burgundy - brand color
+      light: '#A3404F',
+      dark: '#5C0017',
       contrastText: '#ffffff',
     },
     secondary: {
@@ -17,8 +17,8 @@ export const theme = createTheme({
       contrastText: '#ffffff',
     },
     background: {
-      default: '#FFFBF5', // Warm off-white
-      paper: '#FFFFFF',
+      default: '#EAE4DC', // Greige
+      paper: '#F8F6F2', // Light greige
     },
     text: {
       primary: '#2C2C2C',
@@ -31,7 +31,7 @@ export const theme = createTheme({
       main: '#0288D1',
     },
     warning: {
-      main: '#F57C00',
+      main: '#B07A2A', // Muted ochre - harmonizes with burgundy/greige
     },
     error: {
       main: '#D32F2F',
@@ -121,6 +121,9 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
+        },
+        colorDefault: {
+          backgroundColor: '#F8F6F2',
         },
       },
     },

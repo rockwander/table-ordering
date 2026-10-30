@@ -622,8 +622,8 @@ function DashboardContent() {
                   <BarChart data={weeklyData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
-                  <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
-                  <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
+                  <YAxis yAxisId="left" orientation="left" stroke="#800020" />
+                  <YAxis yAxisId="right" orientation="right" stroke="#8A7D6E" />
                   <Tooltip
                     formatter={(value: number, name: string) => {
                       if (name === 'revenue') return `₹${value.toFixed(2)}`;
@@ -632,8 +632,8 @@ function DashboardContent() {
                     labelFormatter={(label) => `${label}`}
                   />
                   <Legend />
-                  <Bar yAxisId="left" dataKey="revenue" fill="#8884d8" name="Revenue (₹)" />
-                  <Bar yAxisId="right" dataKey="orders" fill="#82ca9d" name="Orders" />
+                  <Bar yAxisId="left" dataKey="revenue" fill="#800020" name="Revenue (₹)" />
+                  <Bar yAxisId="right" dataKey="orders" fill="#8A7D6E" name="Orders" />
                 </BarChart>
               </ResponsiveContainer>
               ) : (
@@ -666,8 +666,8 @@ function DashboardContent() {
                     tick={{ fontSize: 12 }}
                     interval="preserveStartEnd"
                   />
-                  <YAxis yAxisId="left" orientation="left" stroke="#ff7300" />
-                  <YAxis yAxisId="right" orientation="right" stroke="#387908" />
+                  <YAxis yAxisId="left" orientation="left" stroke="#800020" />
+                  <YAxis yAxisId="right" orientation="right" stroke="#8A7D6E" />
                   <Tooltip
                     formatter={(value: number, name: string) => {
                       if (name === 'revenue') return `₹${value.toFixed(2)}`;
@@ -676,8 +676,8 @@ function DashboardContent() {
                     labelFormatter={(label) => `Day ${label}`}
                   />
                   <Legend />
-                  <Bar yAxisId="left" dataKey="revenue" fill="#ff7300" name="Revenue (₹)" />
-                  <Bar yAxisId="right" dataKey="orders" fill="#387908" name="Orders" />
+                  <Bar yAxisId="left" dataKey="revenue" fill="#800020" name="Revenue (₹)" />
+                  <Bar yAxisId="right" dataKey="orders" fill="#8A7D6E" name="Orders" />
                 </BarChart>
               </ResponsiveContainer>
               ) : (

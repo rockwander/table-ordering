@@ -4,8 +4,8 @@
   "description": "Restaurant table ordering and management system",
   "start_url": "/admin/dashboard",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#1976d2",
+  "background_color": "#EAE4DC",
+  "theme_color": "#800020",
   "orientation": "portrait-primary",
   "icons": [
     {

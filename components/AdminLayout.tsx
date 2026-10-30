@@ -157,7 +157,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         sx={{
           width: { md: `calc(100% - ${drawerWidth}px)` },
           ml: { md: `${drawerWidth}px` },
-          bgcolor: 'white',
+          bgcolor: 'background.paper',
           color: 'text.primary',
         }}
       >

@@ -74,7 +74,7 @@ export default function Header({
                       color: 'white',
                     }}
                   >
-                    <Typography variant="body2" fontWeight={600}>
+                    <Typography variant="body2" fontWeight={600} color="inherit">
                       Table {tableNumber}
                     </Typography>
                   </Box>
