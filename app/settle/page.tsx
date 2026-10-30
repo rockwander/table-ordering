@@ -13,7 +13,6 @@ import {
   CircularProgress,
   List,
   ListItem,
-  Chip,
   Alert,
 } from '@mui/material';
 import ReceiptIcon from '@mui/icons-material/Receipt';
@@ -22,6 +21,8 @@ import RateReviewIcon from '@mui/icons-material/RateReview';
 import Header from '@/components/Header';
 import { supabase } from '@/lib/supabase';
 import MrpNote from '@/components/MrpNote';
+import OrderStatusChip from '@/components/OrderStatusChip';
+import { useTableOrdersRealtime } from '@/hooks/useTableOrdersRealtime';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getAppDiscount, getMrpAmount, isMrpItem } from '@/lib/discount';
 import { RestaurantSettings } from '@/types';
@@ -64,9 +65,10 @@ function SettleContent() {
     fetchData();
   }, [tableNumber, router]);
 
-  const fetchData = async () => {
+  // Silent refreshes (live status updates) skip the full-page spinner
+  const fetchData = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
 
       // Fetch settings
       const { data: settingsData, error: settingsError } = await supabase
@@ -97,6 +99,9 @@ function SettleContent() {
       setLoading(false);
     }
   };
+
+  // Live status badges when admin updates an order (e.g. marks it ready)
+  useTableOrdersRealtime(tableNumber, () => fetchData(true));
 
   const grandTotal = orders.reduce((sum, order) => sum + order.total, 0);
   const allItems = orders.flatMap((order) => order.order_items);
@@ -174,11 +179,7 @@ function SettleContent() {
                         {new Date(order.created_at).toLocaleString()}
                       </Typography>
                     </Box>
-                    <Chip
-                      label={order.status.toUpperCase()}
-                      color={order.status === 'completed' ? 'success' : 'warning'}
-                      size="small"
-                    />
+                    <OrderStatusChip status={order.status} />
                   </Box>
                   <Divider sx={{ my: 2 }} />
                   <List dense>

@@ -3,6 +3,7 @@
 import { AppBar, Toolbar, Container, Typography, Box, IconButton, Badge, Button } from '@mui/material';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import Logo from './Logo';
+import OrderStatusToast from './OrderStatusToast';
 import { useRouter } from 'next/navigation';
 
 interface HeaderProps {
@@ -25,6 +26,8 @@ export default function Header({
   const router = useRouter();
 
   return (
+    <>
+    {tableNumber && !isAdmin && <OrderStatusToast tableNumber={tableNumber} />}
     <AppBar position="sticky" color="primary" elevation={1}>
       <Container maxWidth="lg">
         <Toolbar sx={{ justifyContent: 'space-between', py: 1 }}>
@@ -111,5 +114,6 @@ export default function Header({
         </Toolbar>
       </Container>
     </AppBar>
+    </>
   );
 }

@@ -119,6 +119,9 @@ const translations = {
     'mrp.formLabel': 'MRP item (no discount)',
     'mrp.itemsExcluded': 'MRP items (no discount)',
     'mrp.excludedFromDiscount': 'Discount does not apply to MRP items',
+
+    // Diner order status toasts
+    'orderToast.ready': 'Order #{n} is ready!',
   },
   gu: {
     // Dashboard
@@ -228,6 +231,9 @@ const translations = {
     'mrp.formLabel': 'MRP વસ્તુ (ડિસ્કાઉન્ટ નહીં)',
     'mrp.itemsExcluded': 'MRP વસ્તુઓ (ડિસ્કાઉન્ટ નહીં)',
     'mrp.excludedFromDiscount': 'MRP વસ્તુઓ પર ડિસ્કાઉન્ટ લાગુ નથી',
+
+    // Diner order status toasts
+    'orderToast.ready': 'ઓર્ડર #{n} તૈયાર છે!',
   },
 };
 

@@ -16,7 +16,6 @@ import {
   ListItem,
   TextField,
   Alert,
-  Chip,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
@@ -26,6 +25,8 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Header from '@/components/Header';
 import { supabase } from '@/lib/supabase';
 import MrpNote from '@/components/MrpNote';
+import OrderStatusChip from '@/components/OrderStatusChip';
+import { useTableOrdersRealtime } from '@/hooks/useTableOrdersRealtime';
 import { isMrpItem } from '@/lib/discount';
 import { useCart } from '@/contexts/CartContext';
 import { RestaurantSettings } from '@/types';
@@ -107,6 +108,9 @@ function CartContent() {
       setFetchingOrders(false);
     }
   };
+
+  // Live status badges when admin updates an order (e.g. marks it ready)
+  useTableOrdersRealtime(tableNumber, fetchOutstandingOrders);
 
   const newCartSubtotal = getCartTotal();
   const newCartTotal = newCartSubtotal; // No tax applied
@@ -240,11 +244,7 @@ function CartContent() {
                         {new Date(order.created_at).toLocaleString()}
                       </Typography>
                     </Box>
-                    <Chip
-                      label={order.status.toUpperCase()}
-                      color={order.status === 'completed' ? 'success' : 'warning'}
-                      size="small"
-                    />
+                    <OrderStatusChip status={order.status} />
                   </Box>
                   <Divider sx={{ my: 2 }} />
                   <List dense>
