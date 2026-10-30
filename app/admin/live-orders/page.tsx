@@ -649,11 +649,11 @@ function LiveOrdersContent() {
       // Header
       doc.setFontSize(20);
       doc.setFont('helvetica', 'bold');
-      doc.text("Ramani's Cafe", 105, 20, { align: 'center' });
+      doc.text("Ramani's Café", 105, 20, { align: 'center' });
 
       doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
-      doc.text('Authentic South Indian Cafe', 105, 28, { align: 'center' });
+      doc.text('Authentic South Indian Café', 105, 28, { align: 'center' });
 
       // Table and Date
       doc.setFontSize(14);
@@ -776,7 +776,7 @@ function LiveOrdersContent() {
       doc.setFont('helvetica', 'normal');
       doc.text('Thank you for dining with us!', 105, yPos, { align: 'center' });
       yPos += 6;
-      doc.text("Ramani's Cafe - Authentic South Indian Cafe", 105, yPos, { align: 'center' });
+      doc.text("Ramani's Café - Authentic South Indian Café", 105, yPos, { align: 'center' });
 
       // Download PDF
       const fileName = `Bill_Table_${bill.table_number || 'Admin'}_${new Date().toISOString().slice(0, 10)}.pdf`;

@@ -5,6 +5,7 @@ import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import Logo from './Logo';
 import OrderStatusToast from './OrderStatusToast';
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 interface HeaderProps {
   tableNumber?: string;
@@ -24,6 +25,18 @@ export default function Header({
   outstandingTotal = 0
 }: HeaderProps) {
   const router = useRouter();
+  const [scrolled, setScrolled] = useState(false);
+
+  // Taller header with tagline at the top; shrinks back once the diner scrolls.
+  // Separate thresholds stop it flickering as the header height changes.
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled((prev) => (prev ? window.scrollY > 8 : window.scrollY > 40));
+    };
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
     <>
@@ -31,7 +44,7 @@ export default function Header({
     <AppBar position="sticky" color="primary" elevation={1}>
       <Container maxWidth="lg">
         <Toolbar sx={{ justifyContent: 'space-between', py: 1 }}>
-          <Logo size="small" showText={true} onDark />
+          <Logo size="small" showText={true} onDark collapsed={scrolled} />
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             {tableNumber && (

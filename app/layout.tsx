@@ -13,13 +13,13 @@ const breeSerif = Bree_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "Ramani's Cafe",
+  title: "Ramani's Café",
   description: "Premium South Indian Cafe - Table Ordering System",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Ramani's Cafe",
+    title: "Ramani's Café",
   },
 };
 

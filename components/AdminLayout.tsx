@@ -184,7 +184,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           >
             <MenuIcon />
           </IconButton>
-          <Logo size="small" showText={true} onDark />
+          <Logo size="small" showText={true} onDark showTagline={false} />
           <Box sx={{ flexGrow: 1 }} />
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
             <Button

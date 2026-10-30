@@ -506,7 +506,7 @@ function DashboardContent() {
             Dashboard
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Welcome to Ramani's Cafe Admin Panel
+            Welcome to Ramani's Café Admin Panel
           </Typography>
         </Box>
         <IconButton

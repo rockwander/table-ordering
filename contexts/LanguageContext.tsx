@@ -13,7 +13,7 @@ interface LanguageContextType {
 const translations = {
   en: {
     // Dashboard
-    'dashboard.title': "Ramani's Cafe Admin",
+    'dashboard.title': "Ramani's Café Admin",
     'dashboard.orders': 'Orders',
     'dashboard.todayOrders': "Today's Orders",
     'dashboard.todayRevenue': "Today's Revenue",
@@ -112,6 +112,9 @@ const translations = {
 
     // Common
     'common.cancel': 'Cancel',
+
+    // Brand
+    'brand.tagline': 'Authentic South Indian Café',
 
     // MRP items (no app discount)
     'mrp.note': 'MRP item · discount not applicable',
@@ -224,6 +227,9 @@ const translations = {
 
     // Common
     'common.cancel': 'રદ કરો',
+
+    // Brand
+    'brand.tagline': 'અસલ દક્ષિણ ભારતીય કૅફે',
 
     // MRP items (no app discount)
     'mrp.note': 'MRP વસ્તુ · ડિસ્કાઉન્ટ લાગુ નથી',
