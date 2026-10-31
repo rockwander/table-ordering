@@ -1099,7 +1099,7 @@ function LiveOrdersContent() {
                                 onClick={() => handleMarkAsReady(order.id)}
                                 disabled={markingReady === order.id}
                               >
-                                {markingReady === order.id ? t('liveOrders.marking') : t('liveOrders.markAsReady')}
+                                {markingReady === order.id ? t('liveOrders.accepting') : t('liveOrders.markAsReady')}
                               </Button>
                             )}
                           </Box>

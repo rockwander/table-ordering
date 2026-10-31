@@ -76,7 +76,8 @@ const translations = {
     'liveOrders.noNewOrders': 'No new orders',
     'liveOrders.noBillsToSettle': 'No bills to settle',
     'liveOrders.noPastBills': 'No past bills',
-    'liveOrders.markAsReady': 'Mark as Ready',
+    'liveOrders.markAsReady': 'Accept Order',
+    'liveOrders.accepting': 'Accepting...',
     'liveOrders.marking': 'Marking...',
     'liveOrders.order': 'Order',
     'liveOrders.orders': 'orders',
@@ -126,7 +127,8 @@ const translations = {
     'mrp.excludedFromDiscount': 'Discount does not apply to MRP items',
 
     // Diner order status toasts
-    'orderToast.ready': 'Order #{n} is ready!',
+    'orderToast.ready': 'Order #{n} has been accepted!',
+    'dinerStatus.accepted': 'Accepted',
   },
   gu: {
     // Dashboard
@@ -193,7 +195,8 @@ const translations = {
     'liveOrders.noNewOrders': 'કોઈ નવા ઓર્ડર્સ નથી',
     'liveOrders.noBillsToSettle': 'ચૂકવવા માટે કોઈ બિલ્સ નથી',
     'liveOrders.noPastBills': 'કોઈ પાછલા બિલ્સ નથી',
-    'liveOrders.markAsReady': 'તૈયાર તરીકે માર્ક કરો',
+    'liveOrders.markAsReady': 'ઓર્ડર સ્વીકારો',
+    'liveOrders.accepting': 'સ્વીકારી રહ્યા છીએ...',
     'liveOrders.marking': 'માર્ક કરી રહ્યા છીએ...',
     'liveOrders.order': 'ઓર્ડર',
     'liveOrders.orders': 'ઓર્ડર્સ',
@@ -243,7 +246,8 @@ const translations = {
     'mrp.excludedFromDiscount': 'MRP વસ્તુઓ પર ડિસ્કાઉન્ટ લાગુ નથી',
 
     // Diner order status toasts
-    'orderToast.ready': 'ઓર્ડર #{n} તૈયાર છે!',
+    'orderToast.ready': 'ઓર્ડર #{n} સ્વીકારાયો છે!',
+    'dinerStatus.accepted': 'સ્વીકૃત',
   },
 };
 

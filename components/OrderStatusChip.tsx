@@ -7,7 +7,7 @@ const statusLabelKeys: Record<string, string> = {
   pending: 'status.pending',
   confirmed: 'status.confirmed',
   preparing: 'status.preparing',
-  ready: 'status.ready',
+  ready: 'dinerStatus.accepted', // Diners see "ready" as Accepted
   served: 'status.served',
   bill_requested: 'status.billRequested',
   paid: 'status.paid',

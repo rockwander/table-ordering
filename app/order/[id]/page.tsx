@@ -36,7 +36,7 @@ const statusLabels: Record<OrderStatus, string> = {
   pending: 'Order Placed',
   confirmed: 'Confirmed',
   preparing: 'Preparing',
-  ready: 'Ready',
+  ready: 'Accepted',
   served: 'Served',
   bill_requested: 'Bill Requested',
   paid: 'Paid',
