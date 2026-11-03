@@ -26,9 +26,7 @@ import {
   Alert,
   Checkbox,
   FormControlLabel,
-  FormControl,
-  Select,
-  MenuItem,
+  Switch,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -77,9 +75,6 @@ const statusColors: Record<OrderStatus, 'default' | 'primary' | 'secondary' | 'e
   cancelled: 'error',
 };
 
-// Filter options inside the New Orders tab
-type OrderFilter = 'new' | 'all' | 'accepted';
-
 // Not yet accepted by the kitchen (accepting sets status to 'ready')
 const isNewOrder = (order: { status: OrderStatus }) =>
   order.status !== 'ready' &&
@@ -87,12 +82,9 @@ const isNewOrder = (order: { status: OrderStatus }) =>
   order.status !== 'bill_requested' &&
   order.status !== 'paid';
 
-const matchesOrderFilter = (order: { status: OrderStatus }, filter: OrderFilter) => {
-  if (order.status === 'paid') return false;
-  if (filter === 'new') return isNewOrder(order);
-  if (filter === 'accepted') return !isNewOrder(order);
-  return true;
-};
+// New Orders tab shows new orders, plus accepted (unpaid) ones when the toggle is on
+const showInNewOrdersTab = (order: { status: OrderStatus }, showAccepted: boolean) =>
+  order.status !== 'paid' && (showAccepted || isNewOrder(order));
 
 interface OrderWithItems extends Order {
   order_items: Array<{
@@ -118,7 +110,7 @@ interface Bill {
 
 function LiveOrdersContent() {
   const [selectedTab, setSelectedTab] = useState(0);
-  const [orderFilter, setOrderFilter] = useState<OrderFilter>('new');
+  const [showAccepted, setShowAccepted] = useState(false);
   const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(true);
   const [markingReady, setMarkingReady] = useState<string | null>(null);
@@ -812,9 +804,9 @@ function LiveOrdersContent() {
   // Filter bills based on selected tab
   const getFilteredBills = () => {
     switch (selectedTab) {
-      case 0: // New Orders tab - bills with at least one order matching the filter
+      case 0: // New Orders tab - bills with at least one order to show
         return bills.filter(bill =>
-          bill.orders.some(order => matchesOrderFilter(order, orderFilter))
+          bill.orders.some(order => showInNewOrdersTab(order, showAccepted))
         );
       case 1: // Settle Bill - bills with at least one order placed (not paid)
         return bills.filter(bill =>
@@ -954,30 +946,25 @@ function LiveOrdersContent() {
         </Tabs>
       </Box>
 
-      {/* Order filter for the New Orders tab */}
+      {/* Toggle for the New Orders tab: also list accepted orders */}
       {selectedTab === 0 && (
-        <FormControl size="small" sx={{ mb: 2, minWidth: 200 }}>
-          <Select
-            value={orderFilter}
-            onChange={(e) => setOrderFilter(e.target.value as OrderFilter)}
-            inputProps={{ 'aria-label': t('liveOrders.filterOrders') }}
-          >
-            <MenuItem value="new">{t('liveOrders.filterNew')}</MenuItem>
-            <MenuItem value="all">{t('liveOrders.filterAll')}</MenuItem>
-            <MenuItem value="accepted">{t('liveOrders.filterAccepted')}</MenuItem>
-          </Select>
-        </FormControl>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={showAccepted}
+              onChange={(e) => setShowAccepted(e.target.checked)}
+            />
+          }
+          label={t('liveOrders.showAccepted')}
+          sx={{ mb: 2 }}
+        />
       )}
 
       {/* Content */}
       {filteredBills.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 8 }}>
           <Typography variant="h6" color="text.secondary">
-            {selectedTab === 0 && t(
-              orderFilter === 'all' ? 'liveOrders.noOpenOrders'
-                : orderFilter === 'accepted' ? 'liveOrders.noAcceptedOrders'
-                : 'liveOrders.noNewOrders'
-            )}
+            {selectedTab === 0 && t(showAccepted ? 'liveOrders.noOpenOrders' : 'liveOrders.noNewOrders')}
             {selectedTab === 1 && t('liveOrders.noBillsToSettle')}
             {selectedTab === 2 && t('liveOrders.noPastBills')}
           </Typography>
@@ -1028,8 +1015,8 @@ function LiveOrdersContent() {
               <AccordionDetails>
                 {/* Orders in this bill */}
                 {bill.orders.map((order, index) => {
-                  // In the New Orders tab, only show orders matching the filter
-                  if (selectedTab === 0 && !matchesOrderFilter(order, orderFilter)) {
+                  // In the New Orders tab, hide accepted orders unless the toggle is on
+                  if (selectedTab === 0 && !showInNewOrdersTab(order, showAccepted)) {
                     return null;
                   }
 
