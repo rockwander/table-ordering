@@ -26,6 +26,9 @@ import {
   Alert,
   Checkbox,
   FormControlLabel,
+  FormControl,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -56,7 +59,7 @@ const statusLabels: Record<OrderStatus, string> = {
   pending: 'Pending',
   confirmed: 'Confirmed',
   preparing: 'Preparing',
-  ready: 'Ready',
+  ready: 'Accepted',
   served: 'Served',
   bill_requested: 'Bill Requested',
   paid: 'Paid',
@@ -72,6 +75,23 @@ const statusColors: Record<OrderStatus, 'default' | 'primary' | 'secondary' | 'e
   bill_requested: 'secondary',
   paid: 'success',
   cancelled: 'error',
+};
+
+// Filter options inside the New Orders tab
+type OrderFilter = 'new' | 'all' | 'accepted';
+
+// Not yet accepted by the kitchen (accepting sets status to 'ready')
+const isNewOrder = (order: { status: OrderStatus }) =>
+  order.status !== 'ready' &&
+  order.status !== 'served' &&
+  order.status !== 'bill_requested' &&
+  order.status !== 'paid';
+
+const matchesOrderFilter = (order: { status: OrderStatus }, filter: OrderFilter) => {
+  if (order.status === 'paid') return false;
+  if (filter === 'new') return isNewOrder(order);
+  if (filter === 'accepted') return !isNewOrder(order);
+  return true;
 };
 
 interface OrderWithItems extends Order {
@@ -98,6 +118,7 @@ interface Bill {
 
 function LiveOrdersContent() {
   const [selectedTab, setSelectedTab] = useState(0);
+  const [orderFilter, setOrderFilter] = useState<OrderFilter>('new');
   const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(true);
   const [markingReady, setMarkingReady] = useState<string | null>(null);
@@ -791,14 +812,9 @@ function LiveOrdersContent() {
   // Filter bills based on selected tab
   const getFilteredBills = () => {
     switch (selectedTab) {
-      case 0: // New Orders - bills with at least one order not "ready" or "paid"
+      case 0: // New Orders tab - bills with at least one order matching the filter
         return bills.filter(bill =>
-          bill.orders.some(order =>
-            order.status !== 'ready' &&
-            order.status !== 'served' &&
-            order.status !== 'bill_requested' &&
-            order.status !== 'paid'
-          )
+          bill.orders.some(order => matchesOrderFilter(order, orderFilter))
         );
       case 1: // Settle Bill - bills with at least one order placed (not paid)
         return bills.filter(bill =>
@@ -821,22 +837,11 @@ function LiveOrdersContent() {
   const filteredBills = getFilteredBills();
 
   // Calculate counts for each tab
-  const newOrdersCount = bills.filter(bill =>
-    bill.orders.some(order =>
-      order.status !== 'ready' &&
-      order.status !== 'served' &&
-      order.status !== 'bill_requested' &&
-      order.status !== 'paid'
-    )
-  ).reduce((count, bill) => {
-    // Count individual orders that are not complete
-    return count + bill.orders.filter(order =>
-      order.status !== 'ready' &&
-      order.status !== 'served' &&
-      order.status !== 'bill_requested' &&
-      order.status !== 'paid'
-    ).length;
-  }, 0);
+  // Badge always counts orders still waiting to be accepted, whatever the filter
+  const newOrdersCount = bills.reduce(
+    (count, bill) => count + bill.orders.filter(isNewOrder).length,
+    0
+  );
 
   const settleBillCount = bills.filter(bill =>
     bill.orders.some(order => order.status !== 'paid')
@@ -949,11 +954,30 @@ function LiveOrdersContent() {
         </Tabs>
       </Box>
 
+      {/* Order filter for the New Orders tab */}
+      {selectedTab === 0 && (
+        <FormControl size="small" sx={{ mb: 2, minWidth: 200 }}>
+          <Select
+            value={orderFilter}
+            onChange={(e) => setOrderFilter(e.target.value as OrderFilter)}
+            inputProps={{ 'aria-label': t('liveOrders.filterOrders') }}
+          >
+            <MenuItem value="new">{t('liveOrders.filterNew')}</MenuItem>
+            <MenuItem value="all">{t('liveOrders.filterAll')}</MenuItem>
+            <MenuItem value="accepted">{t('liveOrders.filterAccepted')}</MenuItem>
+          </Select>
+        </FormControl>
+      )}
+
       {/* Content */}
       {filteredBills.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 8 }}>
           <Typography variant="h6" color="text.secondary">
-            {selectedTab === 0 && t('liveOrders.noNewOrders')}
+            {selectedTab === 0 && t(
+              orderFilter === 'all' ? 'liveOrders.noOpenOrders'
+                : orderFilter === 'accepted' ? 'liveOrders.noAcceptedOrders'
+                : 'liveOrders.noNewOrders'
+            )}
             {selectedTab === 1 && t('liveOrders.noBillsToSettle')}
             {selectedTab === 2 && t('liveOrders.noPastBills')}
           </Typography>
@@ -1004,8 +1028,8 @@ function LiveOrdersContent() {
               <AccordionDetails>
                 {/* Orders in this bill */}
                 {bill.orders.map((order, index) => {
-                  // For "New Orders" tab, only show orders that are not ready/served/paid
-                  if (selectedTab === 0 && (order.status === 'ready' || order.status === 'served' || order.status === 'bill_requested' || order.status === 'paid')) {
+                  // In the New Orders tab, only show orders matching the filter
+                  if (selectedTab === 0 && !matchesOrderFilter(order, orderFilter)) {
                     return null;
                   }
 
@@ -1090,7 +1114,7 @@ function LiveOrdersContent() {
 
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <Box>
-                            {selectedTab === 0 && order.status !== 'ready' && (
+                            {selectedTab === 0 && isNewOrder(order) && (
                               <Button
                                 variant="contained"
                                 color="success"
