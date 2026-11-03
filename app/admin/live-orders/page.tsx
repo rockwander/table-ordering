@@ -38,6 +38,7 @@ import AdminLayout from '@/components/AdminLayout';
 import BuzzerNotification from '@/components/BuzzerNotification';
 import MrpNote from '@/components/MrpNote';
 import { getAppDiscount, getMrpAmount, isMrpItem } from '@/lib/discount';
+import { isNewOrder } from '@/lib/orderStatus';
 import CreateAdminOrderDialog from '@/components/CreateAdminOrderDialog';
 import EditOrderDialog from '@/components/EditOrderDialog';
 import { supabase } from '@/lib/supabase';
@@ -74,13 +75,6 @@ const statusColors: Record<OrderStatus, 'default' | 'primary' | 'secondary' | 'e
   paid: 'success',
   cancelled: 'error',
 };
-
-// Not yet accepted by the kitchen (accepting sets status to 'ready')
-const isNewOrder = (order: { status: OrderStatus }) =>
-  order.status !== 'ready' &&
-  order.status !== 'served' &&
-  order.status !== 'bill_requested' &&
-  order.status !== 'paid';
 
 // New Orders tab shows new orders, plus accepted (unpaid) ones when the toggle is on
 const showInNewOrdersTab = (order: { status: OrderStatus }, showAccepted: boolean) =>

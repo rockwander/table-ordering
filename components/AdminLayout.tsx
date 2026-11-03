@@ -28,6 +28,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import QrCode2Icon from '@mui/icons-material/QrCode2';
 import TranslateIcon from '@mui/icons-material/Translate';
 import PlaylistPlayIcon from '@mui/icons-material/PlaylistPlay';
+import SoupKitchenIcon from '@mui/icons-material/SoupKitchen';
 import Logo from './Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -35,20 +36,24 @@ import { useUserRole } from '@/hooks/useUserRole';
 
 const drawerWidth = 260;
 
-// Admin has access to all tabs
+// Admin has access to all tabs (labels are translation keys)
 const adminMenuItems = [
-  { label: 'Dashboard', icon: <DashboardIcon />, path: '/admin/dashboard' },
-  { label: 'Live Orders', icon: <PlaylistPlayIcon />, path: '/admin/live-orders' },
-  { label: 'Orders', icon: <ReceiptLongIcon />, path: '/admin/orders' },
-  { label: 'Menu Management', icon: <RestaurantMenuIcon />, path: '/admin/menu' },
-  { label: 'QR Codes & Tables', icon: <QrCode2Icon />, path: '/admin/tables' },
-  { label: 'Settings', icon: <SettingsIcon />, path: '/admin/settings' },
+  { label: 'nav.dashboard', icon: <DashboardIcon />, path: '/admin/dashboard' },
+  { label: 'nav.liveOrders', icon: <PlaylistPlayIcon />, path: '/admin/live-orders' },
+  { label: 'nav.kitchenView', icon: <SoupKitchenIcon />, path: '/admin/kitchen' },
+  { label: 'nav.orders', icon: <ReceiptLongIcon />, path: '/admin/orders' },
+  { label: 'nav.menu', icon: <RestaurantMenuIcon />, path: '/admin/menu' },
+  { label: 'nav.tables', icon: <QrCode2Icon />, path: '/admin/tables' },
+  { label: 'nav.settings', icon: <SettingsIcon />, path: '/admin/settings' },
 ];
 
-// Executive only has access to Live Orders
+// Executive only has access to Live Orders and Kitchen View
 const executiveMenuItems = [
-  { label: 'Live Orders', icon: <PlaylistPlayIcon />, path: '/admin/live-orders' },
+  { label: 'nav.liveOrders', icon: <PlaylistPlayIcon />, path: '/admin/live-orders' },
+  { label: 'nav.kitchenView', icon: <SoupKitchenIcon />, path: '/admin/kitchen' },
 ];
+
+const executivePaths = executiveMenuItems.map((item) => item.path);
 
 // Language toggle styles for the burgundy top bar
 const headerToggleSx = (selected: boolean) =>
@@ -71,7 +76,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const pathname = usePathname();
   const { signOut } = useAuth();
-  const { language, setLanguage } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
   const { role, loading: roleLoading, isAdmin, isExecutive } = useUserRole();
 
   // Get menu items based on role
@@ -79,7 +84,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   // Redirect executives to Live Orders if they try to access other pages
   useEffect(() => {
-    if (!roleLoading && isExecutive && pathname && !pathname.includes('/admin/live-orders') && pathname !== '/admin/login') {
+    if (!roleLoading && isExecutive && pathname && !executivePaths.some((path) => pathname.startsWith(path)) && pathname !== '/admin/login') {
       router.push('/admin/live-orders');
     }
   }, [isExecutive, pathname, router, roleLoading]);
@@ -140,7 +145,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 {item.icon}
               </ListItemIcon>
               <ListItemText
-                primary={item.label}
+                primary={t(item.label)}
                 primaryTypographyProps={{
                   fontWeight: pathname === item.path ? 600 : 400,
                 }}
@@ -158,7 +163,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           onClick={handleSignOut}
           sx={{ borderRadius: 2 }}
         >
-          Sign Out
+          {t('nav.signOut')}
         </Button>
       </Box>
     </Box>
@@ -227,7 +232,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   borderColor: 'background.paper',
                 },
               }}
-              title="Sign Out"
+              title={t('nav.signOut')}
             >
               <LogoutIcon fontSize="small" />
             </IconButton>

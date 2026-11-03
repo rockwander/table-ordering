@@ -131,6 +131,30 @@ const translations = {
     // Diner order status toasts
     'orderToast.ready': 'Order #{n} has been accepted!',
     'dinerStatus.accepted': 'Accepted',
+
+    // Kitchen View
+    'kitchen.title': 'Kitchen View',
+    'kitchen.subtitle': 'All items to prepare across open orders',
+    'kitchen.allCategories': 'All',
+    'kitchen.itemQty': 'Item × Qty',
+    'kitchen.tableOrder': 'Table : Order',
+    'kitchen.chipLabel': 'T{table} : #{n}',
+    'kitchen.adminShort': 'Admin',
+    'kitchen.legendNew': 'New – tap to accept',
+    'kitchen.legendAccepted': 'Accepted',
+    'kitchen.noItems': 'No items to prepare',
+    'kitchen.noItemsInCategory': 'No items to prepare in this category',
+    'kitchen.acceptFailed': 'Failed to accept order',
+
+    // Navigation
+    'nav.dashboard': 'Dashboard',
+    'nav.liveOrders': 'Live Orders',
+    'nav.kitchenView': 'Kitchen View',
+    'nav.orders': 'Orders',
+    'nav.menu': 'Menu Management',
+    'nav.tables': 'QR Codes & Tables',
+    'nav.settings': 'Settings',
+    'nav.signOut': 'Sign Out',
   },
   gu: {
     // Dashboard
@@ -252,6 +276,30 @@ const translations = {
     // Diner order status toasts
     'orderToast.ready': 'ઓર્ડર #{n} સ્વીકારાયો છે!',
     'dinerStatus.accepted': 'સ્વીકૃત',
+
+    // Kitchen View
+    'kitchen.title': 'કિચન વ્યૂ',
+    'kitchen.subtitle': 'ખુલ્લા ઓર્ડર્સમાં બનાવવાની બધી વસ્તુઓ',
+    'kitchen.allCategories': 'બધી',
+    'kitchen.itemQty': 'વસ્તુ × જથ્થો',
+    'kitchen.tableOrder': 'ટેબલ : ઓર્ડર',
+    'kitchen.chipLabel': 'ટેબલ {table} : #{n}',
+    'kitchen.adminShort': 'એડમિન',
+    'kitchen.legendNew': 'નવો – સ્વીકારવા ટેપ કરો',
+    'kitchen.legendAccepted': 'સ્વીકૃત',
+    'kitchen.noItems': 'બનાવવા માટે કોઈ વસ્તુઓ નથી',
+    'kitchen.noItemsInCategory': 'આ કેટેગરીમાં બનાવવા માટે કોઈ વસ્તુઓ નથી',
+    'kitchen.acceptFailed': 'ઓર્ડર સ્વીકારવામાં નિષ્ફળ',
+
+    // Navigation
+    'nav.dashboard': 'ડેશબોર્ડ',
+    'nav.liveOrders': 'લાઈવ ઓર્ડર્સ',
+    'nav.kitchenView': 'કિચન વ્યૂ',
+    'nav.orders': 'ઓર્ડર્સ',
+    'nav.menu': 'મેનુ મેનેજમેન્ટ',
+    'nav.tables': 'QR કોડ અને ટેબલ્સ',
+    'nav.settings': 'સેટિંગ્સ',
+    'nav.signOut': 'સાઇન આઉટ',
   },
 };
 
