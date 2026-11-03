@@ -135,7 +135,8 @@ const translations = {
     // Kitchen View
     'kitchen.title': 'Kitchen View',
     'kitchen.subtitle': 'All items to prepare across open orders',
-    'kitchen.allCategories': 'All',
+    'kitchen.allCategories': 'All categories',
+    'kitchen.categories': 'Categories',
     'kitchen.itemQty': 'Item × Qty',
     'kitchen.tableOrder': 'Table : Order',
     'kitchen.chipLabel': 'T{table} : #{n}',
@@ -143,7 +144,7 @@ const translations = {
     'kitchen.legendNew': 'New – tap to accept',
     'kitchen.legendAccepted': 'Accepted',
     'kitchen.noItems': 'No items to prepare',
-    'kitchen.noItemsInCategory': 'No items to prepare in this category',
+    'kitchen.noItemsInCategory': 'No items to prepare in the selected categories',
     'kitchen.acceptFailed': 'Failed to accept order',
 
     // Navigation
@@ -280,7 +281,8 @@ const translations = {
     // Kitchen View
     'kitchen.title': 'કિચન વ્યૂ',
     'kitchen.subtitle': 'ખુલ્લા ઓર્ડર્સમાં બનાવવાની બધી વસ્તુઓ',
-    'kitchen.allCategories': 'બધી',
+    'kitchen.allCategories': 'બધી કેટેગરી',
+    'kitchen.categories': 'કેટેગરી',
     'kitchen.itemQty': 'વસ્તુ × જથ્થો',
     'kitchen.tableOrder': 'ટેબલ : ઓર્ડર',
     'kitchen.chipLabel': 'ટેબલ {table} : #{n}',
@@ -288,7 +290,7 @@ const translations = {
     'kitchen.legendNew': 'નવો – સ્વીકારવા ટેપ કરો',
     'kitchen.legendAccepted': 'સ્વીકૃત',
     'kitchen.noItems': 'બનાવવા માટે કોઈ વસ્તુઓ નથી',
-    'kitchen.noItemsInCategory': 'આ કેટેગરીમાં બનાવવા માટે કોઈ વસ્તુઓ નથી',
+    'kitchen.noItemsInCategory': 'પસંદ કરેલી કેટેગરીમાં બનાવવા માટે કોઈ વસ્તુઓ નથી',
     'kitchen.acceptFailed': 'ઓર્ડર સ્વીકારવામાં નિષ્ફળ',
 
     // Navigation

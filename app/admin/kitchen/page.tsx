@@ -13,6 +13,13 @@ import {
   Paper,
   CircularProgress,
   Chip,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Checkbox,
+  ListItemText,
+  OutlinedInput,
 } from '@mui/material';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -27,7 +34,9 @@ import { stopNotificationSound } from '@/lib/sound';
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
-const CATEGORY_STORAGE_KEY = 'kitchen_category_filter';
+const CATEGORY_STORAGE_KEY = 'kitchen_category_filters';
+// Single-category filter saved before multi-select; migrated on first load
+const LEGACY_CATEGORY_STORAGE_KEY = 'kitchen_category_filter';
 
 interface KitchenOrder extends Order {
   order_items: Array<{
@@ -61,7 +70,8 @@ interface KitchenRow {
 function KitchenViewContent() {
   const [orders, setOrders] = useState<KitchenOrder[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  // Empty means all categories
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [acceptingOrderIds, setAcceptingOrderIds] = useState<Set<string>>(new Set());
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
@@ -92,20 +102,35 @@ function KitchenViewContent() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem(CATEGORY_STORAGE_KEY);
-      if (saved) setSelectedCategory(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) setSelectedCategories(parsed.filter(id => typeof id === 'string'));
+        return;
+      }
+
+      const legacy = localStorage.getItem(LEGACY_CATEGORY_STORAGE_KEY);
+      if (legacy && legacy !== 'all') setSelectedCategories([legacy]);
     } catch {
-      // Storage unavailable - fall back to all categories
+      // Storage unavailable or corrupt - fall back to all categories
     }
   }, []);
 
-  const handleSelectCategory = (categoryId: string) => {
-    setSelectedCategory(categoryId);
+  const handleCategoriesChange = (categoryIds: string[]) => {
+    setSelectedCategories(categoryIds);
     try {
-      localStorage.setItem(CATEGORY_STORAGE_KEY, categoryId);
+      localStorage.setItem(CATEGORY_STORAGE_KEY, JSON.stringify(categoryIds));
+      localStorage.removeItem(LEGACY_CATEGORY_STORAGE_KEY);
     } catch {
       // Storage unavailable - filter just won't persist
     }
   };
+
+  // Ignore saved categories that were since deleted or deactivated
+  const activeSelectedCategories = useMemo(
+    () => selectedCategories.filter(id => categories.some(category => category.id === id)),
+    [selectedCategories, categories]
+  );
+  const isFiltered = activeSelectedCategories.length > 0;
 
   // Initialize notifications (same setup as Live Orders, so sound works if the app opens here)
   useEffect(() => {
@@ -272,7 +297,7 @@ function KitchenViewContent() {
 
     orders.forEach(order => {
       order.order_items.forEach(item => {
-        if (selectedCategory !== 'all' && item.menu_items?.category_id !== selectedCategory) {
+        if (isFiltered && !activeSelectedCategories.includes(item.menu_items?.category_id ?? '')) {
           return;
         }
 
@@ -313,7 +338,7 @@ function KitchenViewContent() {
       if (aTime !== bTime) return aTime < bTime ? -1 : 1;
       return a.name.localeCompare(b.name);
     });
-  }, [orders, selectedCategory]);
+  }, [orders, activeSelectedCategories, isFiltered]);
 
   if (loading) {
     return (
@@ -349,23 +374,44 @@ function KitchenViewContent() {
       </Box>
 
       {/* Category filter */}
-      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
-        <Chip
-          label={t('kitchen.allCategories')}
-          color={selectedCategory === 'all' ? 'primary' : 'default'}
-          variant={selectedCategory === 'all' ? 'filled' : 'outlined'}
-          onClick={() => handleSelectCategory('all')}
-        />
-        {categories.map(category => (
-          <Chip
-            key={category.id}
-            label={category.name}
-            color={selectedCategory === category.id ? 'primary' : 'default'}
-            variant={selectedCategory === category.id ? 'filled' : 'outlined'}
-            onClick={() => handleSelectCategory(category.id)}
-          />
-        ))}
-      </Box>
+      <FormControl size="small" sx={{ mb: 2, width: { xs: '100%', sm: 360 } }}>
+        <InputLabel id="kitchen-category-filter-label" shrink>
+          {t('kitchen.categories')}
+        </InputLabel>
+        <Select
+          labelId="kitchen-category-filter-label"
+          multiple
+          displayEmpty
+          value={activeSelectedCategories}
+          onChange={(e) => {
+            const value = e.target.value;
+            handleCategoriesChange(typeof value === 'string' ? value.split(',') : value);
+          }}
+          input={<OutlinedInput notched label={t('kitchen.categories')} />}
+          renderValue={(selected) =>
+            selected.length === 0 ? (
+              t('kitchen.allCategories')
+            ) : (
+              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                {selected.map(id => (
+                  <Chip
+                    key={id}
+                    size="small"
+                    label={categories.find(category => category.id === id)?.name ?? id}
+                  />
+                ))}
+              </Box>
+            )
+          }
+        >
+          {categories.map(category => (
+            <MenuItem key={category.id} value={category.id}>
+              <Checkbox checked={activeSelectedCategories.includes(category.id)} />
+              <ListItemText primary={category.name} />
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
 
       {/* Legend */}
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap', mb: 2 }}>
@@ -382,7 +428,7 @@ function KitchenViewContent() {
       {rows.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 8 }}>
           <Typography variant="h6" color="text.secondary">
-            {t(selectedCategory === 'all' ? 'kitchen.noItems' : 'kitchen.noItemsInCategory')}
+            {t(isFiltered ? 'kitchen.noItemsInCategory' : 'kitchen.noItems')}
           </Typography>
         </Box>
       ) : (
