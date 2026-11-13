@@ -123,7 +123,7 @@ const translations = {
 
     // MRP items (no app discount)
     'banner.discount10Alt': '10% off on every order placed via this app. Auto-applied when you settle your bill.',
-    'banner.mysoreMasalaDosaAlt': 'Mysore Masala Dosa',
+    'banner.milletRagiDosaAlt': 'Millet Ragi Masala Dosa',
     'banner.kumbakonamCoffeeAlt': 'New: Naturally sweetened Kumbakonam Filter Coffee, ₹50. Sugar-free, sweetened with monk fruit.',
     'banner.idiyappamKurmaAlt': 'Weekend special: Idiyappam Kurma, ₹120.',
     'mrp.note': 'MRP item · discount not applicable',
@@ -273,7 +273,7 @@ const translations = {
 
     // MRP items (no app discount)
     'banner.discount10Alt': 'આ એપ દ્વારા આપેલ દરેક ઓર્ડર પર 10% ડિસ્કાઉન્ટ. બિલ ચૂકવતી વખતે આપમેળે લાગુ થશે.',
-    'banner.mysoreMasalaDosaAlt': 'મૈસૂર મસાલા ઢોસા',
+    'banner.milletRagiDosaAlt': 'મિલેટ રાગી મસાલા ઢોસા',
     'banner.kumbakonamCoffeeAlt': 'નવું: કુદરતી રીતે મીઠી કુંભકોણમ ફિલ્ટર કોફી, ₹50. શુગર-ફ્રી, મોન્ક ફ્રૂટથી મીઠી.',
     'banner.idiyappamKurmaAlt': 'વીકેન્ડ સ્પેશિયલ: ઇડિયપ્પમ કુરમા, ₹120.',
     'mrp.note': 'MRP વસ્તુ · ડિસ્કાઉન્ટ લાગુ નથી',

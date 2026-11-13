@@ -35,10 +35,10 @@ const BANNERS: Banner[] = [
   },
   {
     type: 'item',
-    id: 'mysore-masala-dosa',
-    menuItemId: '7ce2d921-2949-4c64-9b07-3000148b68db', // Mysore Masala Dosai (Ghee)
-    images: { en: '/banners/mysore-masala-dosa-en.png', gu: '/banners/mysore-masala-dosa-gu.png' },
-    altKey: 'banner.mysoreMasalaDosaAlt',
+    id: 'millet-ragi-dosa',
+    menuItemId: 'fb8961d8-1508-4af5-911d-d5fc91859fc3', // Ragi Masala Dosai
+    images: { en: '/banners/millet-ragi-dosa-en.png', gu: '/banners/millet-ragi-dosa-gu.png' },
+    altKey: 'banner.milletRagiDosaAlt',
   },
   {
     type: 'item',

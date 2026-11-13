@@ -81,15 +81,19 @@ function discountBannerSvg(copy) {
 
 const dishBanners = [
   {
-    id: 'mysore-masala-dosa',
+    // Menu item "Ragi Masala Dosai" (millet ragi dosa); photo modelled on the item's own image
+    id: 'millet-ragi-dosa',
+    referenceImageUrl:
+      'https://raw.githubusercontent.com/rockwander/image-repo/refs/heads/main/ChatGPT%20Image%20Sep%2014%2C%202026%2C%2002_10_54%20PM.png',
     prompt:
-      'Professional food photograph of a crispy golden Mysore masala dosa with its signature red chutney ' +
-      'spread inside, served on a banana leaf with coconut chutney and sambar in small steel bowls. ' +
-      'Dark rustic wooden table, warm moody lighting, burgundy and beige tones. ' +
-      'The dish sits in the right half of the frame; the left half is dark, softly blurred and empty. ' +
-      'Wide landscape shot, no text, no logos, no people.',
+      'Recreate the exact dish from the reference photo as a professional food photograph: the same rolled, ' +
+      'lacy brown millet ragi dosa with yellow potato masala visible at the open end, on a banana leaf on the same ' +
+      'steel plate, with the same three small steel bowls of sambar, coconut chutney and red chutney. Keep the dish, ' +
+      'plating, plate and bowls identical to the reference. Dark rustic wooden table, warm moody lighting, burgundy ' +
+      'and beige tones. The dish sits in the right half of the frame; the left half is dark, softly blurred and empty. ' +
+      'Wide landscape shot. Remove all text, signs and lettering from the reference: no text, no logos, no people.',
     // One entry per line of overlay text
-    names: { en: ['Mysore', 'Masala Dosa'], gu: ['મૈસૂર', 'મસાલા ઢોસા'] },
+    names: { en: ['Millet Ragi', 'Masala Dosa'], gu: ['મિલેટ રાગી', 'મસાલા ઢોસા'] },
   },
   {
     // From the "Healthy @ Ramani's" story; menu item "Sugarfree Kumbakonam filter coffee"
