@@ -122,6 +122,7 @@ const translations = {
     'brand.pureVeg.line2': 'Vegetarian',
 
     // MRP items (no app discount)
+    'banner.discount10Alt': '10% off on every order placed via this app. Auto-applied when you settle your bill.',
     'mrp.note': 'MRP item · discount not applicable',
     'mrp.chip': 'MRP',
     'mrp.formLabel': 'MRP item (no discount)',
@@ -268,6 +269,7 @@ const translations = {
     'brand.pureVeg.line2': 'શાકાહારી',
 
     // MRP items (no app discount)
+    'banner.discount10Alt': 'આ એપ દ્વારા આપેલ દરેક ઓર્ડર પર 10% ડિસ્કાઉન્ટ. બિલ ચૂકવતી વખતે આપમેળે લાગુ થશે.',
     'mrp.note': 'MRP વસ્તુ · ડિસ્કાઉન્ટ લાગુ નથી',
     'mrp.chip': 'MRP',
     'mrp.formLabel': 'MRP વસ્તુ (ડિસ્કાઉન્ટ નહીં)',

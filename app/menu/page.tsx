@@ -27,7 +27,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import Header from '@/components/Header';
 import MrpNote from '@/components/MrpNote';
-import HighlightCircles from '@/components/HighlightCircles';
+import BannerCarousel from '@/components/BannerCarousel';
 import StoryViewer from '@/components/StoryViewer';
 import { supabase } from '@/lib/supabase';
 import { Category, MenuItem } from '@/types';
@@ -403,47 +403,15 @@ function MenuContent() {
       )}
 
       <Container maxWidth="lg" sx={{ py: 3 }}>
-        {/* Story Highlights */}
-        <Box sx={{ mb: 3, mx: -1 }}>
-          <HighlightCircles onHighlightClick={setSelectedHighlight} />
+        {/* Banner Carousel */}
+        <Box sx={{ mb: 3 }}>
+          <BannerCarousel />
         </Box>
 
         <Box sx={{ mb: 3 }}>
-          <Typography variant="h4" gutterBottom fontWeight={700}>
+          <Typography variant="h4" fontWeight={700}>
             Our Menu
           </Typography>
-          <Box
-            sx={{
-              bgcolor: 'success.main',
-              px: 2,
-              py: 1.5,
-              borderRadius: 1,
-              display: 'inline-block',
-            }}
-          >
-            <Typography
-              variant="body2"
-              sx={{
-                fontWeight: 600,
-                fontSize: '0.95rem',
-                color: 'white',
-              }}
-            >
-              10% off on all orders placed via this app
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                fontStyle: 'italic',
-                display: 'block',
-                mt: 0.5,
-                color: 'white',
-                opacity: 0.9,
-              }}
-            >
-              Offer will be auto-applied while settling bill
-            </Typography>
-          </Box>
         </Box>
 
         {/* Search Bar */}
