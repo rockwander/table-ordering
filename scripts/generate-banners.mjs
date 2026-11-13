@@ -1,10 +1,15 @@
 // Generates menu carousel banners as PNGs in public/banners/.
-// Usage: node scripts/generate-banners.mjs
+// Dish photos come from Gemini and are cached in scripts/banner-photos/;
+// pass --regenerate-photos to request fresh ones.
+// Usage: node --env-file=.env.local scripts/generate-banners.mjs [--regenerate-photos]
 import sharp from 'sharp';
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const OUT_DIR = join(process.cwd(), 'public', 'banners');
+const PHOTO_DIR = join(process.cwd(), 'scripts', 'banner-photos');
+const GEMINI_IMAGE_MODEL = 'gemini-3.1-flash-image';
+const REGENERATE_PHOTOS = process.argv.includes('--regenerate-photos');
 const WIDTH = 1200;
 const HEIGHT = 600;
 
@@ -14,6 +19,7 @@ const BURGUNDY_DARK = '#5C0017';
 const BEIGE = '#F3EBDD';
 const BEIGE_LIGHT = '#FBF7F0';
 const OCHRE = '#B07A2A';
+const OCHRE_LIGHT = '#E0B86A'; // ochre lifted for small text on burgundy
 
 const LATIN_FONT = "'Helvetica Neue', Helvetica, Arial, sans-serif";
 const GUJARATI_FONT = "'Gujarati Sangam MN', 'Gujarati MT', 'Noto Sans Gujarati', sans-serif";
@@ -73,10 +79,137 @@ function discountBannerSvg(copy) {
 </svg>`;
 }
 
+const dishBanners = [
+  {
+    id: 'mysore-masala-dosa',
+    prompt:
+      'Professional food photograph of a crispy golden Mysore masala dosa with its signature red chutney ' +
+      'spread inside, served on a banana leaf with coconut chutney and sambar in small steel bowls. ' +
+      'Dark rustic wooden table, warm moody lighting, burgundy and beige tones. ' +
+      'The dish sits in the right half of the frame; the left half is dark, softly blurred and empty. ' +
+      'Wide landscape shot, no text, no logos, no people.',
+    // One entry per line of overlay text
+    names: { en: ['Mysore', 'Masala Dosa'], gu: ['મૈસૂર', 'મસાલા ઢોસા'] },
+  },
+  {
+    // From the "Healthy @ Ramani's" story; menu item "Sugarfree Kumbakonam filter coffee"
+    id: 'kumbakonam-coffee',
+    prompt:
+      'Professional food photograph of frothy South Indian Kumbakonam filter coffee in a traditional brass ' +
+      'tumbler and dabarah set, with a halved monk fruit (luo han guo), a few coffee beans and fresh green leaves beside it. ' +
+      'Dark rustic wooden table, warm moody lighting, burgundy and beige tones. ' +
+      'The coffee sits in the right half of the frame; the left half is dark, softly blurred and empty. ' +
+      'Wide landscape shot, no text, no logos, no people.',
+    names: { en: ['Kumbakonam', 'Filter Coffee'], gu: ['કુંભકોણમ', 'ફિલ્ટર કોફી'] },
+    badge: { en: 'NEW', gu: 'નવું' },
+    price: '₹50',
+    tagline: { en: 'Sugar-free · Sweetened with monk fruit', gu: 'શુગર-ફ્રી · મોન્ક ફ્રૂટથી મીઠી' },
+  },
+];
+
+async function getDishPhoto(dish) {
+  const file = join(PHOTO_DIR, `${dish.id}.jpg`);
+  if (existsSync(file) && !REGENERATE_PHOTOS) return readFileSync(file);
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY is not set (run with --env-file=.env.local)');
+
+  console.log(`… generating photo for ${dish.id} with ${GEMINI_IMAGE_MODEL}`);
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent`,
+    {
+      method: 'POST',
+      headers: { 'x-goog-api-key': apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: dish.prompt }] }],
+        generationConfig: { responseModalities: ['IMAGE'], imageConfig: { aspectRatio: '16:9' } },
+      }),
+    }
+  );
+  const data = await res.json();
+  if (data.error) throw new Error(`Gemini error ${data.error.code}: ${data.error.message}`);
+
+  const image = data.candidates?.[0]?.content?.parts?.find((part) => part.inlineData);
+  if (!image) throw new Error(`Gemini returned no image for ${dish.id}`);
+
+  const buffer = Buffer.from(image.inlineData.data, 'base64');
+  mkdirSync(PHOTO_DIR, { recursive: true });
+  writeFileSync(file, buffer);
+  return buffer;
+}
+
+// Rough pill width for a short label; good enough for badges like "NEW" or "₹50"
+function pillWidth(text, fontSize) {
+  // Gujarati vowel signs and marks don't take up their own width
+  const visible = text.replace(/[\u0A81-\u0A83\u0ABC-\u0ACD]/g, '');
+  return Math.round(visible.length * fontSize * 0.7 + 44);
+}
+
+function dishOverlaySvg(dish, lang, font) {
+  const lines = dish.names[lang];
+  const badge = dish.badge?.[lang];
+  const tagline = dish.tagline?.[lang];
+  const lineHeight = 84;
+  const lastBaseline = tagline ? HEIGHT - 150 : HEIGHT - 90;
+  const firstBaseline = lastBaseline - (lines.length - 1) * lineHeight;
+  const topY = firstBaseline - 110;
+
+  // Top of the stack: badge + price pills when present, otherwise a short accent line
+  let top = '';
+  if (badge || dish.price) {
+    let x = 80;
+    if (badge) {
+      const w = pillWidth(badge, 24);
+      top += `<rect x="${x}" y="${topY - 14}" width="${w}" height="44" rx="22" fill="${OCHRE}"/>
+  <text x="${x + w / 2}" y="${topY + 16}" font-family="${font}" font-size="24" font-weight="800" fill="${BEIGE_LIGHT}" text-anchor="middle" letter-spacing="${lang === 'en' ? 2 : 0}">${badge}</text>`;
+      x += w + 14;
+    }
+    if (dish.price) {
+      const w = pillWidth(dish.price, 26);
+      top += `<rect x="${x}" y="${topY - 14}" width="${w}" height="44" rx="22" fill="none" stroke="${BEIGE_LIGHT}" stroke-opacity="0.8" stroke-width="2"/>
+  <text x="${x + w / 2}" y="${topY + 17}" font-family="${LATIN_FONT}" font-size="26" font-weight="700" fill="${BEIGE_LIGHT}" text-anchor="middle">${dish.price}</text>`;
+    }
+  } else {
+    top = `<rect x="80" y="${topY}" width="72" height="6" rx="3" fill="${OCHRE}"/>`;
+  }
+
+  return `
+<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}">
+  <defs>
+    <linearGradient id="fade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="${BURGUNDY_DARK}" stop-opacity="0.95"/>
+      <stop offset="0.38" stop-color="${BURGUNDY}" stop-opacity="0.75"/>
+      <stop offset="0.65" stop-color="${BURGUNDY}" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="${WIDTH}" height="${HEIGHT}" fill="url(#fade)"/>
+  ${top}
+  <g font-family="${font}" font-size="72" font-weight="800" fill="${BEIGE_LIGHT}">
+    ${lines.map((line, i) => `<text x="80" y="${firstBaseline + i * lineHeight}">${line}</text>`).join('\n    ')}
+  </g>
+  ${tagline ? `<text x="80" y="${lastBaseline + 66}" font-family="${font}" font-size="30" font-weight="500" fill="${OCHRE_LIGHT}">${tagline}</text>` : ''}
+</svg>`;
+}
+
 mkdirSync(OUT_DIR, { recursive: true });
 
 for (const [lang, copy] of Object.entries(discountCopy)) {
   const file = join(OUT_DIR, `discount-10-${lang}.png`);
   await sharp(Buffer.from(discountBannerSvg(copy))).png().toFile(file);
   console.log(`✓ ${file}`);
+}
+
+for (const dish of dishBanners) {
+  const photo = await sharp(await getDishPhoto(dish))
+    .resize(WIDTH, HEIGHT, { fit: 'cover', position: 'right' })
+    .toBuffer();
+
+  for (const [lang, font] of [['en', LATIN_FONT], ['gu', GUJARATI_FONT]]) {
+    const file = join(OUT_DIR, `${dish.id}-${lang}.png`);
+    await sharp(photo)
+      .composite([{ input: Buffer.from(dishOverlaySvg(dish, lang, font)) }])
+      .png()
+      .toFile(file);
+    console.log(`✓ ${file}`);
+  }
 }

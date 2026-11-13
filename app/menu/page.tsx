@@ -71,6 +71,33 @@ function MenuContent() {
   const [currentVisibleCategory, setCurrentVisibleCategory] = useState<string | null>(null);
   const [showStickyCategory, setShowStickyCategory] = useState(false);
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
+  // Set by tapping an item banner; scrolled to once the full menu has rendered
+  const [scrollToItemId, setScrollToItemId] = useState<string | null>(null);
+  const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
+
+  const handleItemBannerClick = (itemId: string) => {
+    // The item may be hidden by a category filter or search, so show the full menu first
+    setSelectedCategory('all');
+    setSearchQuery('');
+    setScrollToItemId(itemId);
+  };
+
+  useEffect(() => {
+    if (!scrollToItemId) return;
+    const element = document.querySelector(`[data-category-section] [data-menu-item="${scrollToItemId}"]`);
+    if (element) {
+      const elementTop = element.getBoundingClientRect().top + window.scrollY;
+      window.scrollTo({ top: elementTop - 150, behavior: 'smooth' });
+      setHighlightedItemId(scrollToItemId);
+    }
+    setScrollToItemId(null);
+  }, [scrollToItemId, selectedCategory, searchQuery]);
+
+  useEffect(() => {
+    if (!highlightedItemId) return;
+    const timer = setTimeout(() => setHighlightedItemId(null), 2500);
+    return () => clearTimeout(timer);
+  }, [highlightedItemId]);
 
   const { cartItems, addToCart, updateQuantity, removeFromCart, getCartItemCount } = useCart();
 
@@ -405,7 +432,10 @@ function MenuContent() {
       <Container maxWidth="lg" sx={{ py: 3 }}>
         {/* Banner Carousel */}
         <Box sx={{ mb: 3 }}>
-          <BannerCarousel />
+          <BannerCarousel
+            availableItemIds={menuItems.map((item) => item.id)}
+            onItemBannerClick={handleItemBannerClick}
+          />
         </Box>
 
         <Box sx={{ mb: 3 }}>
@@ -659,6 +689,7 @@ function MenuContent() {
                     {items.map((item) => (
                       <Card
                         key={item.id}
+                        data-menu-item={item.id}
                         sx={{
                           display: 'flex',
                           flexDirection: 'column',
@@ -666,6 +697,9 @@ function MenuContent() {
                           maxWidth: 360,
                           mx: 'auto',
                           width: '100%',
+                          outline: '3px solid',
+                          outlineColor: item.id === highlightedItemId ? 'primary.main' : 'transparent',
+                          transition: 'outline-color 0.4s ease',
                         }}
                       >
                         {item.image_url && (
