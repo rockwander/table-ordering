@@ -103,9 +103,33 @@ const dishBanners = [
     names: { en: ['Kumbakonam', 'Filter Coffee'], gu: ['કુંભકોણમ', 'ફિલ્ટર કોફી'] },
     badge: { en: 'NEW', gu: 'નવું' },
     price: '₹50',
+    eyebrow: { en: 'Naturally sweetened', gu: 'કુદરતી રીતે મીઠી' },
     tagline: { en: 'Sugar-free · Sweetened with monk fruit', gu: 'શુગર-ફ્રી · મોન્ક ફ્રૂટથી મીઠી' },
   },
+  {
+    // Menu item "Weekend Special - Idiyappam with vegetable kurma"; photo modelled on the item's own image
+    id: 'idiyappam-kurma',
+    referenceImageUrl:
+      'https://raw.githubusercontent.com/rockwander/image-repo/refs/heads/main/file_0000000061c882119e5e39378c8798b5.png',
+    prompt:
+      'Recreate the exact dish from the reference photo as a professional food photograph: the same four white ' +
+      'idiyappam (string hoppers) on a banana leaf on the same green-rimmed ceramic plate, and the same bowl of ' +
+      'creamy white vegetable kurma with carrots, peas, potatoes and curry leaves. Keep the dish, plating, plate and ' +
+      'bowl identical to the reference. Dark rustic wooden table, warm moody lighting, burgundy and beige tones. ' +
+      'The dish sits in the right half of the frame; the left half is dark, softly blurred and empty. ' +
+      'Wide landscape shot. Remove all text and lettering from the reference: no text, no logos, no people.',
+    names: { en: ['Idiyappam', 'Kurma'], gu: ['ઇડિયપ્પમ', 'કુરમા'] },
+    badge: { en: 'WEEKEND SPECIAL', gu: 'વીકેન્ડ સ્પેશિયલ' },
+    price: '₹120',
+  },
 ];
+
+async function fetchReferenceImage(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Could not fetch reference image ${url}: ${res.status}`);
+  const buffer = Buffer.from(await res.arrayBuffer());
+  return { inlineData: { mimeType: res.headers.get('content-type') || 'image/png', data: buffer.toString('base64') } };
+}
 
 async function getDishPhoto(dish) {
   const file = join(PHOTO_DIR, `${dish.id}.jpg`);
@@ -121,7 +145,12 @@ async function getDishPhoto(dish) {
       method: 'POST',
       headers: { 'x-goog-api-key': apiKey, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: dish.prompt }] }],
+        contents: [{
+          parts: [
+            ...(dish.referenceImageUrl ? [await fetchReferenceImage(dish.referenceImageUrl)] : []),
+            { text: dish.prompt },
+          ],
+        }],
         generationConfig: { responseModalities: ['IMAGE'], imageConfig: { aspectRatio: '16:9' } },
       }),
     }
@@ -148,11 +177,13 @@ function pillWidth(text, fontSize) {
 function dishOverlaySvg(dish, lang, font) {
   const lines = dish.names[lang];
   const badge = dish.badge?.[lang];
+  const eyebrow = dish.eyebrow?.[lang];
   const tagline = dish.tagline?.[lang];
   const lineHeight = 84;
   const lastBaseline = tagline ? HEIGHT - 150 : HEIGHT - 90;
   const firstBaseline = lastBaseline - (lines.length - 1) * lineHeight;
-  const topY = firstBaseline - 110;
+  const eyebrowBaseline = firstBaseline - 82;
+  const topY = firstBaseline - 110 - (eyebrow ? 52 : 0);
 
   // Top of the stack: badge + price pills when present, otherwise a short accent line
   let top = '';
@@ -184,6 +215,7 @@ function dishOverlaySvg(dish, lang, font) {
   </defs>
   <rect width="${WIDTH}" height="${HEIGHT}" fill="url(#fade)"/>
   ${top}
+  ${eyebrow ? `<text x="80" y="${eyebrowBaseline}" font-family="${font}" font-size="30" font-weight="600" font-style="italic" fill="${OCHRE_LIGHT}">${eyebrow}</text>` : ''}
   <g font-family="${font}" font-size="72" font-weight="800" fill="${BEIGE_LIGHT}">
     ${lines.map((line, i) => `<text x="80" y="${firstBaseline + i * lineHeight}">${line}</text>`).join('\n    ')}
   </g>

@@ -47,6 +47,13 @@ const BANNERS: Banner[] = [
     images: { en: '/banners/kumbakonam-coffee-en.png', gu: '/banners/kumbakonam-coffee-gu.png' },
     altKey: 'banner.kumbakonamCoffeeAlt',
   },
+  {
+    type: 'item',
+    id: 'idiyappam-kurma',
+    menuItemId: '1ad5a12e-3869-43fb-8f94-26dc2304f7d1', // Weekend Special - Idiyappam with vegetable kurma
+    images: { en: '/banners/idiyappam-kurma-en.png', gu: '/banners/idiyappam-kurma-gu.png' },
+    altKey: 'banner.idiyappamKurmaAlt',
+  },
 ];
 
 const AUTO_ADVANCE_MS = 5000;
