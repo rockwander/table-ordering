@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, useTransition, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
   Container,
@@ -74,6 +74,21 @@ function MenuContent() {
   // Set by tapping an item banner; scrolled to once the full menu has rendered
   const [scrollToItemId, setScrollToItemId] = useState<string | null>(null);
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
+
+  // Navigating to the cart runs as a transition so the button can show a spinner until the cart page is ready
+  const [isOpeningCart, startOpeningCart] = useTransition();
+
+  // router.push doesn't prefetch, so without this the first tap waits on the cart page loading
+  useEffect(() => {
+    if (tableNumber) router.prefetch(`/cart?table=${tableNumber}`);
+  }, [tableNumber, router]);
+
+  const handlePlaceOrderClick = () => {
+    if (isOpeningCart) return;
+    startOpeningCart(() => {
+      router.push(`/cart?table=${tableNumber}`);
+    });
+  };
 
   const handleItemBannerClick = (itemId: string) => {
     // The item may be hidden by a category filter or search, so show the full menu first
@@ -1009,7 +1024,8 @@ function MenuContent() {
           variant="contained"
           size="large"
           color="primary"
-          onClick={() => router.push(`/cart?table=${tableNumber}`)}
+          onClick={handlePlaceOrderClick}
+          aria-busy={isOpeningCart}
           sx={{
             position: 'fixed',
             bottom: 24,
@@ -1025,7 +1041,13 @@ function MenuContent() {
             whiteSpace: 'nowrap',
           }}
         >
-          Place Order • {getCartItemCount()} {getCartItemCount() === 1 ? 'item' : 'items'}
+          {/* Label stays in place (hidden) while loading so the button keeps its size */}
+          <Box component="span" sx={{ visibility: isOpeningCart ? 'hidden' : 'visible' }}>
+            Place Order • {getCartItemCount()} {getCartItemCount() === 1 ? 'item' : 'items'}
+          </Box>
+          {isOpeningCart && (
+            <CircularProgress size={26} color="inherit" sx={{ position: 'absolute' }} />
+          )}
         </Button>
       )}
 
